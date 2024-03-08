@@ -1,2 +1,2 @@
 # Cuernavaca-2024
-Códigos de la comptencia Autonomous Mechatronics Grand Prix del Tecnológico de Monterrey
+Códigos de la competencia Autonomous Mechatronics Grand Prix del Tecnológico de Monterrey
