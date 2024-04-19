@@ -14,7 +14,7 @@ tello.takeoff()
 while True:
 
     img = frame_read.frame
-    resize = cv2.resize(img, (500, 300)) 
+    resize = cv2.resize(img, (500, 300))
     cv2.imshow("drone", img)
     key = cv2.waitKey(1)
     if key == 27:
