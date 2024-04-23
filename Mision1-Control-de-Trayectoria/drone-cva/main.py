@@ -1,16 +1,41 @@
-# canny package
+# El código detecta cículos en el centro de la pantalla (en la computadora).
+# Hay un contador para los Circulos detectados (todos los que se ven al momento).
+# Se visualiza una maya para ver los rangos.
+# (...Agregando las funciones para que se usen en el dron).
+
 import cv2
+import time
 import numpy as np
+from djitellopy import Tello
+import cv2, math, time
+
+#import fn
+
+# Con el dron
+# tello = Tello()
+# tello.connect()
+# print("Conectado")
+# tello.streamon()
+# frame_read = tello.get_frame_read()
+# print(tello.get_battery())
 
 # get capture from built-in camera
 capture = cv2.VideoCapture(0)
 
 detectedCircles = 0
+circleOutCenter = True
+
+def showGrid(frame):
+    # Draw a 3x3 grid on the frame
+    for i in range(1, 3):
+        cv2.line(frame, (i * frame.shape[1] // 3, 0), (i * frame.shape[1] // 3, frame.shape[0]), (255, 255, 255), 1)
+        cv2.line(frame, (0, i * frame.shape[0] // 3), (frame.shape[1], i * frame.shape[0] // 3), (255, 255, 255), 1)
 
 # Función para detectar círculos en una región de interés (ROI) de la imagen
-def detect_circles_in_roi(image, x_center, y_center, roi_width, roi_height):
-
+def detect_figures_in_roi(image, x_center, y_center, roi_width, roi_height):
+    
     global detectedCircles
+    global circleOutCenter
 
     # Definir la región de interés (ROI) centrada en (x_center, y_center)
     x = x_center - roi_width//2
@@ -35,8 +60,12 @@ def detect_circles_in_roi(image, x_center, y_center, roi_width, roi_height):
             # Dibujar el círculo y su centro en el fotograma original
             cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
             cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
-        detectedCircles += 1
-
+            if circleOutCenter:
+                detectedCircles += 1
+                circleOutCenter = False
+                
+                time.sleep(10)
+                circleOutCenter = False
     return image
 
 """ # apply canny filter to a frame
@@ -47,11 +76,6 @@ def apply_canny_filter(frame):
     edges = cv2.Canny(gray, 100, 200)
     return edges """
 
-def showGrid(frame):
-    # Draw a 3x3 grid on the frame
-    for i in range(1, 3):
-        cv2.line(frame, (i * frame.shape[1] // 3, 0), (i * frame.shape[1] // 3, frame.shape[0]), (255, 255, 255), 1)
-        cv2.line(frame, (0, i * frame.shape[0] // 3), (frame.shape[1], i * frame.shape[0] // 3), (255, 255, 255), 1)
 
 while True:
     # Capture frame-by-frame
@@ -70,7 +94,7 @@ while True:
         y_center = height // 2
 
         # Detectar círculos en el área central de la imagen
-        detected_frame = detect_circles_in_roi(frame, x_center, y_center, roi_width, roi_height)
+        detected_frame = detect_figures_in_roi(frame, x_center, y_center, roi_width, roi_height)
 
         """ # Apply the Canny filter to the frame
         edges = apply_canny_filter(frame)
@@ -86,8 +110,8 @@ while True:
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("Detected Circles", detected_frame)
 
-    if not ret:
-        break
+    # if not ret:
+    #     break
 
     # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -96,3 +120,5 @@ while True:
 # When everything done, release the capture
 capture.release()
 cv2.destroyAllWindows()
+
+
