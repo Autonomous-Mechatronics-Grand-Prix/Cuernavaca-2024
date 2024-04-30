@@ -1,40 +1,17 @@
+# TERMINADO: 
 # El código detecta cículos en el centro de la pantalla (en la computadora).
 # Hay un contador para los Circulos detectados (todos los que se ven al momento).
 # Se visualiza una maya para ver los rangos.
-# (...Agregando las funciones para que se usen en el dron).
+# Ahora funciona en el dron.
+
+# PENDIENTES:
+# Detectar más figuras y moverse
+# Detectar colores
 
 import numpy as np
 from djitellopy import Tello
 import cv2, math, time
 #from multiprocessing import Process
-
-
-# Inicializamos el objeto Tello
-tello = Tello()
-
-# Conectamos con el Tello
-tello.connect()
-
-# Imprimimos la batería (tiene que ser mayor al 20%)
-print(
-"""
-+================================+
-|                                |
-| Despegando...                  |
-| Nivel actual de carga:""", tello.get_battery(), """%    |
-|                                |
-+================================+
-""")
-
-# Iniciamos el streaming de video
-tello.streamon()
-
-# Obtenemos el frame del video
-frame_read = tello.get_frame_read()
-
-
-detectedCircles = 0
-circleOutCenter = True
 
 def showGrid(frame):
     # Draw a 3x3 grid on the frame
@@ -68,26 +45,17 @@ def detect_figures_in_roi(image, x_center, y_center, roi_width, roi_height):
             # Ajustar las coordenadas del círculo al fotograma original
             x_circle += x
             y_circle += y
+            
             # Dibujar el círculo y su centro en el fotograma original
             cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
             cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
-            if circleOutCenter:
-                detectedCircles += 1
-                print(tello.get_battery())
-                tello.land()
-                # circleOutCenter = False
-                # time.sleep(10)
-                # circleOutCenter = False
-                # print("Circle detected")
+            
+            # Mostrar la cantidad de círculos detectados
+            detectedCircles += 1
+            print("detectedCircles:", detectedCircles)
+            
     return image
 
-""" # apply canny filter to a frame
-def apply_canny_filter(frame):
-    # Convert the image to grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    # Apply the Canny filter
-    edges = cv2.Canny(gray, 100, 200)
-    return edges """
 def espera():
     time.sleep(1)
     circleOutCenter = True
@@ -96,15 +64,38 @@ def espera():
 # p.daemon = True  # Establecer el proceso como demonio para que se detenga cuando el programa principal termine
 # p.start()
 
+# Inicializamos el objeto Tello
+tello = Tello()
+
+# Conectamos con el Tello
+tello.connect()
+
+# Imprimimos la batería (tiene que ser mayor al 20%)
+print(
+"""
++================================+
+|                                |
+| Despegando...                  |
+| Nivel actual de carga:""", tello.get_battery(), """%    |
+|                                |
++================================+
+""")
+
+# Iniciamos el streaming de video
+tello.streamon()
+
+# Obtenemos el frame del video
+frame_read = tello.get_frame_read()
+
+detectedCircles = 0
+circleOutCenter = True
+
 while True:
     # Asignar y leer el fotograma actual de la cámara
     frame = frame_read.frame
     
     # Tamaño de nuestra ventana
     resize = cv2.resize(frame, (500, 300))
-    
-    # Mostramos la imagen en una ventana
-    cv2.imshow("POV eres el dron", frame)
 
     # Tamaño de la región de interés (ROI) centrada en el centro de la pantalla
     roi_width = 300
@@ -112,38 +103,28 @@ while True:
     
      # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
     key = cv2.waitKey(1)
-    
     if key == 27 or key == ord('q'):
+        # Aterriza
+        tello.land()
         break
+    elif key == ord('p'):
+        # Despega
+        tello.takeoff()
+    
+    # Obtener las dimensiones del fotograma
     height, width = frame.shape[:2]
-    '''if ret:
-        pass
-        # Obtener las dimensiones del fotograma
-        height, width = frame.shape[:2]
         
-        # Calcular las coordenadas del centro de la pantalla
-        x_center = width // 2
-        y_center = height // 2
+    # Calcular las coordenadas del centro de la pantalla
+    x_center = width // 2
+    y_center = height // 2
 
-        # Detectar círculos en el área central de la imagen
-        detected_frame = detect_figures_in_roi(frame, x_center, y_center, roi_width, roi_height)
+    # Detectar círculos en el área central de la imagen
+    detected_frame = detect_figures_in_roi(frame, x_center, y_center, roi_width, roi_height)
 
-        """ # Apply the Canny filter to the frame
-        edges = apply_canny_filter(frame)
+    showGrid(frame)    
 
-        # Display the resulting frame
-        cv2.imshow('Original', frame)
-        cv2.imshow('Canny filter', edges) """
-
-        showGrid(frame)
-
-        print("detectedCircles:", detectedCircles)
-
-        # Mostrar el fotograma con círculos detectados
-        cv2.imshow("Detected Circles", detected_frame)
-        '''
-    # if not ret:
-    #     break
+    # Mostrar el fotograma con círculos detectados
+    cv2.imshow("POV eres el dron", detected_frame)
     
 print(
 """
@@ -154,7 +135,6 @@ print(
 |                                |
 ----------------------------------
 """)
-#tello.land()
     
 
 
