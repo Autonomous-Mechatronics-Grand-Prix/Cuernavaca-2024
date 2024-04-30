@@ -1,4 +1,6 @@
 import mis_funciones
 
-# Llamar a la función desde el módulo importado
-mis_funciones.saludar("Juan")
+x = mis_funciones.funcion_a()
+print(x)
+mis_funciones.funcion_b()
+mis_funciones.funcion_c()

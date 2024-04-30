@@ -3,24 +3,35 @@
 # Se visualiza una maya para ver los rangos.
 # (...Agregando las funciones para que se usen en el dron).
 
-import cv2
-import time
 import numpy as np
 from djitellopy import Tello
 import cv2, math, time
+#from multiprocessing import Process
 
-#import fn
 
-# Con el dron
-# tello = Tello()
-# tello.connect()
-# print("Conectado")
-# tello.streamon()
-# frame_read = tello.get_frame_read()
-# print(tello.get_battery())
+# Inicializamos el objeto Tello
+tello = Tello()
 
-# get capture from built-in camera
-capture = cv2.VideoCapture(0)
+# Conectamos con el Tello
+tello.connect()
+
+# Imprimimos la batería (tiene que ser mayor al 20%)
+print(
+"""
++================================+
+|                                |
+| Despegando...                  |
+| Nivel actual de carga:""", tello.get_battery(), """%    |
+|                                |
++================================+
+""")
+
+# Iniciamos el streaming de video
+tello.streamon()
+
+# Obtenemos el frame del video
+frame_read = tello.get_frame_read()
+
 
 detectedCircles = 0
 circleOutCenter = True
@@ -62,10 +73,12 @@ def detect_figures_in_roi(image, x_center, y_center, roi_width, roi_height):
             cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
             if circleOutCenter:
                 detectedCircles += 1
-                circleOutCenter = False
-                
-                time.sleep(10)
-                circleOutCenter = False
+                print(tello.get_battery())
+                tello.land()
+                # circleOutCenter = False
+                # time.sleep(10)
+                # circleOutCenter = False
+                # print("Circle detected")
     return image
 
 """ # apply canny filter to a frame
@@ -75,20 +88,39 @@ def apply_canny_filter(frame):
     # Apply the Canny filter
     edges = cv2.Canny(gray, 100, 200)
     return edges """
+def espera():
+    time.sleep(1)
+    circleOutCenter = True
 
+# p = Process(target=espera)
+# p.daemon = True  # Establecer el proceso como demonio para que se detenga cuando el programa principal termine
+# p.start()
 
 while True:
-    # Capture frame-by-frame
-    ret, frame = capture.read()
+    # Asignar y leer el fotograma actual de la cámara
+    frame = frame_read.frame
+    
+    # Tamaño de nuestra ventana
+    resize = cv2.resize(frame, (500, 300))
+    
+    # Mostramos la imagen en una ventana
+    cv2.imshow("POV eres el dron", frame)
 
     # Tamaño de la región de interés (ROI) centrada en el centro de la pantalla
     roi_width = 300
     roi_height = 300
-
-    if ret:
+    
+     # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
+    key = cv2.waitKey(1)
+    
+    if key == 27 or key == ord('q'):
+        break
+    height, width = frame.shape[:2]
+    '''if ret:
+        pass
         # Obtener las dimensiones del fotograma
         height, width = frame.shape[:2]
-
+        
         # Calcular las coordenadas del centro de la pantalla
         x_center = width // 2
         y_center = height // 2
@@ -109,16 +141,21 @@ while True:
 
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("Detected Circles", detected_frame)
-
+        '''
     # if not ret:
     #     break
+    
+print(
+"""
+----------------------------------
+|                                |
+| Aterrizando...                 |
+| Nivel final de carga:""", tello.get_battery(), """%     |
+|                                |
+----------------------------------
+""")
+#tello.land()
+    
 
-    # Press 'q' to quit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# When everything done, release the capture
-capture.release()
-cv2.destroyAllWindows()
 
 

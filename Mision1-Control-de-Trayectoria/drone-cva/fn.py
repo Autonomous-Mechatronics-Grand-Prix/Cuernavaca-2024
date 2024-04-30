@@ -1,3 +1,10 @@
+import cv2
+import time
+import numpy as np
+from djitellopy import Tello
+import cv2, math, time
+
+
 def showGrid(frame):
     # Draw a 3x3 grid on the frame
     for i in range(1, 3):
