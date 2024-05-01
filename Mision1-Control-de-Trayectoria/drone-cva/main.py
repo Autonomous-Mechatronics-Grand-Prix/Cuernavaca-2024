@@ -37,47 +37,39 @@ def detect_figures(image):
         [(2 * (width // 3), 2 * (height // 3)), (width, height)]            # Región 9 (abajo a la derecha)
     ]
     
-    # Dibujar las regiones en la imagen
-    for i, (p1, p2) in enumerate(regiones, start=1):
-        cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
-        # Poner texto guía
-        #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-
-    # Convertir la ROI a escala de grises
+    # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Aplicar suavizado para reducir el ruido
     gray_blurred = cv2.GaussianBlur(gray, (9, 9), 2)
 
     # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos) 
-    circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=20, param2=50, minRadius=0, maxRadius=0)
+    circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=200, param2=50, minRadius=0, maxRadius=0)
 
-    if circles is not None:
-        sameCircle = True
+    # Dibujar las regiones en la imagen
+    for i, (p1, p2) in enumerate(regiones, start=1):
+        cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
+        # Poner texto guía
+        #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
         
-        # Redondear las coordenadas de los círculos detectados
-        circles = np.round(circles[0, :]).astype("int")
-        
-        for (x_circle, y_circle, r) in circles:
+        '''if circles is not None and i == 5:
+            sameCircle = True
+    
+            # Redondear las coordenadas de los círculos detectados
+            circles = np.round(circles[0, :]).astype("int")
             
-            # Dibujar el círculo y su centro en el fotograma original
-            cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
-            cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
-            
-            # Mostrar la cantidad de círculos detectados
-            detectedCircles += 1
-            print("detectedCircles:", detectedCircles)
-    # else: 
-    # #     sameCircle = False
+            for (x_circle, y_circle, r) in circles:
+                
+                # Dibujar el círculo y su centro en el fotograma original
+                cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
+                cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
+                
+                # Mostrar la cantidad de círculos detectados
+                # detectedCircles += 1
+                # print("detectedCircles:", detectedCircles)'''
+        print(circles)
+
     return image
-
-# def espera():
-#     time.sleep(1)
-#     sameCircle = True
-
-# p = Process(target=espera)
-# p.daemon = True  # Establecer el proceso como demonio para que se detenga cuando el programa principal termine
-# p.start()
 
 # Inicializamos el objeto Tello
 tello = Tello()
@@ -137,7 +129,3 @@ print(
 |                                |
 ----------------------------------
 """)
-    
-
-
-
