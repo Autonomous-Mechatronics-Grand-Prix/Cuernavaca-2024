@@ -73,6 +73,7 @@ def detect_figures(image):
                 # Dibujar el círculo y su centro en el fotograma original
                 cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
                 cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
+                cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
                 
                 # Pregunta si es el mismo círculo de la posición pasada
                 if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
@@ -103,11 +104,21 @@ def detect_figures(image):
         sides = len(approx)
         shape = ""
         x, y, w, h = cv2.boundingRect(approx)
-        if sides == 4:
+        if sides == 3:
+            # Calcular si es un triángulo equilátero
+            # aspect_ratio = float(w) / h
+            # if 0.90 <= aspect_ratio <= 1.10:
+            shape = "Triangle"
+        elif sides == 4:
             # Calcular el rectángulo delimitador para verificar si es un cuadrado
             aspect_ratio = float(w) / h
             if 0.90 <= aspect_ratio <= 1.10:
                 shape = "Cuadrado"
+        elif sides == 5:
+            #pass
+            # aspect_ratio = float(w) / h
+            # if 0.90 <= aspect_ratio <= 1.10:
+            shape = "Pentágono"
         
         # Obtener el centroide de la figura
         M = cv2.moments(contour)
@@ -115,9 +126,15 @@ def detect_figures(image):
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
-                if shape == "Cuadrado": 
-                    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)         
+                if shape == "Cuadrado": pass
+                    # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
+                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
+                elif shape == "Triangle": 
+                    print("Triangle detected")
+                    # Dibujar el triángulo en la imagen
+                    #cv2.polylines(image, [contour], isClosed=True, color=(0, 255, 0), thickness=2)
+                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
+                    cv2.bitwise_and(image, image, mask=[contour])
     return image
 # endregion functions
 
