@@ -84,7 +84,38 @@ def detect_figures(image):
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX 
             lastUbiY = actualUbiY
-                        
+            
+    # Apply umbrella filter to detect edges
+    edges = cv2.Canny(gray_blurred, 100, 200)
+
+    # Find contours in the umbrellaed image
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Draw the contours on the image
+    for contour in contours:
+        # Aproximar la forma del contorno a una forma más simple
+        epsilon = 0.04 * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+
+        # Determinar el tipo de forma
+        sides = len(approx)
+        shape = ""
+        x, y, w, h = cv2.boundingRect(approx)
+        if sides == 4:
+            # Calcular el rectángulo delimitador para verificar si es un cuadrado
+            aspect_ratio = float(w) / h
+            if 0.90 <= aspect_ratio <= 1.10:
+                shape = "Cuadrado"
+        
+        # Obtener el centroide de la figura
+        M = cv2.moments(contour)
+        if M["m00"] != 0:
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
+                if shape == "Cuadrado": 
+                    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
+                    cv2.circle(image, (cX, cY), 5, (0, 128, 255), -1)         
     return image
 
 # Inicializamos el objeto Tello
