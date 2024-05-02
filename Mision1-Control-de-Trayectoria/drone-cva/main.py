@@ -138,7 +138,8 @@ def detect_figures(image):
         sides = len(approx)
         shape = ""
         x, y, w, h = cv2.boundingRect(approx)
-        if sides == 3:
+        blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
+        if sides == 3 and blue_mask is not None:
             # Calcular si es un triángulo equilátero
             # aspect_ratio = float(w) / h
             # if 0.90 <= aspect_ratio <= 1.10:
