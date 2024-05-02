@@ -115,7 +115,7 @@ def detect_figures(image):
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
                 if shape == "Cuadrado": 
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    cv2.circle(image, (cX, cY), 5, (0, 128, 255), -1)         
+                    cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)         
     return image
 
 # Inicializamos el objeto Tello
