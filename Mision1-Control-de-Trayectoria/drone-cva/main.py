@@ -1,4 +1,4 @@
-# TERMINADO: 
+# TERMINADO:
 # Malla de regiones.
 # Detecta cículos en el centro.
 # Contador para los Circulos detectados en el centro.
@@ -12,23 +12,57 @@ import numpy as np
 from djitellopy import Tello
 import cv2, math, time
 
+# region variables
+
+# Define a dictionary to store the color ranges
+color_ranges = {
+  # (hue_min, sat_min, val_min), (hue_max, sat_max, val_max)
+  'orange': {
+    'lower': np.array([5, 100, 100]), # Minimum values of H, S, V for orange color
+    'upper': np.array([20, 255, 255]) # Maximum values of H, S, V for orange color
+  },
+  'yellow': {
+    'lower': np.array([20, 100, 100]), # Minimum values of H, S, V for yellow color
+    'upper': np.array([30, 255, 255]) # Maximum values of H, S, V for yellow color
+  },
+  'green': {
+    'lower': np.array([30, 50, 50]), # Minimum values of H, S, V for green color
+    'upper': np.array([89, 255, 255]) # Maximum values of H, S, V for green color
+  },
+  'blue': {
+    'lower': np.array([90, 50, 50]), # Minimum values of H, S, V for blue color
+    'upper': np.array([130, 255, 255]) # Maximum values of H, S, V for blue color
+  },
+  'red': {
+    'lower': np.array([165, 50, 50]), # Minimum values of H, S, V for red color
+    'upper': np.array([180, 255, 255]) # Maximum values of H, S, V for red color
+  }
+}
+
+# endregion variables
+
 # region functions
+
+# function to create a binary mask where pixels within the color range are white and others are black
+def mask_color(image, lower_color, upper_color):
+  mask = cv2.inRange(image, lower_color, upper_color)
+  return mask
 
 # Función para detectar círculos en una región de interés (ROI) de la imagen
 def detect_figures(image):
-    
+
     # Solicitamos las variables globales
     global circlesCount
     global lastUbiX, lastUbiY
-    
+
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
-    
+
     widthDivThree = width // 3
     heightDivThree = height // 3
     widthDivThreePtwo = 2 * widthDivThree
     heightDivThreePtwo = 2 * heightDivThree
-    
+
     regiones = [
         [(0, 0), (widthDivThree, heightDivThree)],                                  # Región 1 (arriba a la izquierda)
         [(widthDivThree, 0), (widthDivThreePtwo, heightDivThree)],                  # Región 2 (arriba al centro)
@@ -40,14 +74,14 @@ def detect_figures(image):
         [(widthDivThree, heightDivThreePtwo), (widthDivThreePtwo, height)],         # Región 8 (abajo al centro)
         [(widthDivThreePtwo, heightDivThreePtwo), (width, height)]                  # Región 9 (abajo a la derecha)
     ]
-    
+
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Aplicar suavizado para reducir el ruido
     gray_blurred = cv2.GaussianBlur(gray, (9, 9), 2)
 
-    # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos) 
+    # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos)
     circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=175, param2=55, minRadius=0, maxRadius=0)
 
     # Dibujar las regiones en la imagen
@@ -55,26 +89,26 @@ def detect_figures(image):
         cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
         # Poner texto guía
         #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-        
+
     if circles is not None:
 
         # Redondear las coordenadas de los círculos detectados
         circles = np.round(circles[0, :]).astype("int")
-        
+
         for (x_circle, y_circle, r) in circles:
-            
+
             # Guardamos la ubicación actual del círculo
             actualUbiX = x_circle
             actualUbiY = y_circle
 
             # Preguntar si está en el centro la figura
             if (x_circle >= widthDivThree and x_circle <= widthDivThreePtwo) and (y_circle >= heightDivThree and y_circle <= heightDivThreePtwo):
-        
+
                 # Dibujar el círculo y su centro en el fotograma original
                 cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
                 cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
                 cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-                
+
                 # Pregunta si es el mismo círculo de la posición pasada
                 if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
                     # No hace nada xd
@@ -83,11 +117,11 @@ def detect_figures(image):
                     # Mostrar la cantidad de círculos detectados +1
                     circlesCount += 1
                     print("circlesCount:", circlesCount)
-                    
+
             # Actualiza la posición del cículo por si está en otra región
-            lastUbiX = actualUbiX 
+            lastUbiX = actualUbiX
             lastUbiY = actualUbiY
-            
+
     # Apply umbrella filter to detect edges
     edges = cv2.Canny(gray_blurred, 100, 200)
 
@@ -114,22 +148,26 @@ def detect_figures(image):
             aspect_ratio = float(w) / h
             if 0.90 <= aspect_ratio <= 1.10:
                 shape = "Cuadrado"
+
         elif sides == 5:
             #pass
             # aspect_ratio = float(w) / h
             # if 0.90 <= aspect_ratio <= 1.10:
             shape = "Pentágono"
-        
+
         # Obtener el centroide de la figura
         M = cv2.moments(contour)
         if M["m00"] != 0:
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
+                if shape == "Cuadrado":
+                    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
+                    cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
                 if shape == "Cuadrado": pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
-                elif shape == "Triangle": 
+                elif shape == "Triangle":
                     print("Triangle detected")
                     # Dibujar el triángulo en la imagen
                     #cv2.polylines(image, [contour], isClosed=True, color=(0, 255, 0), thickness=2)
@@ -170,10 +208,13 @@ lastUbiY = 0
 while True:
     # Asignar y leer el fotograma actual de la cámara
     frame = frame_read.frame
-    
+
+    # Convert the image from BGR to HSV (Hue, Saturation, Value)
+    hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
     # Tamaño de nuestra ventana
     resize = cv2.resize(frame, (500, 300))
-    
+
     # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
     key = cv2.waitKey(1)
     if key == 27 or key == ord('q'):
@@ -185,11 +226,11 @@ while True:
         tello.takeoff()
 
     # Detectar círculos en el área central de la imagen
-    detected_frame = detect_figures(frame) 
+    detected_frame = detect_figures(frame)
 
     # Mostrar el fotograma con círculos detectados
     cv2.imshow("POV eres el dron", detected_frame)
-    
+
 print(
 """
 ----------------------------------
