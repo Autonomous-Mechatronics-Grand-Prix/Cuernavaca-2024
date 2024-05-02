@@ -12,7 +12,7 @@ import numpy as np
 from djitellopy import Tello
 import cv2, math, time
 
-#region functions
+# region functions
 
 # Función para detectar círculos en una región de interés (ROI) de la imagen
 def detect_figures(image):
@@ -119,11 +119,9 @@ def detect_figures(image):
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)         
     return image
+# endregion functions
 
-
-#endregion functions
-
-#region main
+# region main
 
 # Inicializamos el objeto Tello
 tello = Tello()
