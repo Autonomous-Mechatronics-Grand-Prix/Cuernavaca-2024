@@ -1,11 +1,9 @@
 # TERMINADO: 
-# Detector de cículos.
-# Contador para los Circulos detectados (todos los que se ven al momento).
-# Tenemos una malla de regiones.
+# Malla de regiones.
+# Detecta cículos en el centro.
+# Contador para los Circulos detectados en el centro.
 
 # PENDIENTES:
-# Seccionar la vista por regiones
-# Corregir el contador
 # Detectar más figuras y moverse
 # Detectar colores
 # Interfaz web
@@ -13,71 +11,81 @@
 import numpy as np
 from djitellopy import Tello
 import cv2, math, time
-#from multiprocessing import Process
 
 # Función para detectar círculos en una región de interés (ROI) de la imagen
 def detect_figures(image):
     
     # Solicitamos las variables globales
-    global detectedCircles
-    global sameCircle
+    global circlesCount
+    global lastUbiX, lastUbiY
     
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
     
+    widthDivThree = width // 3
+    heightDivThree = height // 3
+    widthDivThreePtwo = 2 * widthDivThree
+    heightDivThreePtwo = 2 * heightDivThree
+    
     regiones = [
-        [(0, 0), (width // 3, height // 3)],                                # Región 1 (arriba a la izquierda)
-        [(width // 3, 0), (2 * (width // 3), height // 3)],                 # Región 2 (arriba al centro)
-        [(2 * (width // 3), 0), (width, height // 3)],                      # Región 3 (arriba a la derecha)
-        [(0, height // 3), (width // 3, 2 * (height // 3))],                # Región 4 (centro a la izquierda)
-        [(width // 3, height // 3), (2 * (width // 3), 2 * (height // 3))], # Región 5 (centro central)
-        [(2 * (width // 3), height // 3), (width, 2 * (height // 3))],      # Región 6 (centro a la derecha)
-        [(0, 2 * (height // 3)), (width // 3, height)],                     # Región 7 (abajo a la izquierda)
-        [(width // 3, 2 * (height // 3)), (2 * (width // 3), height)],      # Región 8 (abajo al centro)
-        [(2 * (width // 3), 2 * (height // 3)), (width, height)]            # Región 9 (abajo a la derecha)
+        [(0, 0), (widthDivThree, heightDivThree)],                                  # Región 1 (arriba a la izquierda)
+        [(widthDivThree, 0), (widthDivThreePtwo, heightDivThree)],                  # Región 2 (arriba al centro)
+        [(widthDivThreePtwo, 0), (width, heightDivThree)],                          # Región 3 (arriba a la derecha)
+        [(0, heightDivThree), (widthDivThree, heightDivThreePtwo)],                 # Región 4 (centro a la izquierda)
+        [(widthDivThree, heightDivThree), (widthDivThreePtwo, heightDivThreePtwo)], # Región 5 (centro central)
+        [(widthDivThreePtwo, heightDivThree), (width, heightDivThreePtwo)],         # Región 6 (centro a la derecha)
+        [(0, heightDivThreePtwo), (widthDivThree, height)],                         # Región 7 (abajo a la izquierda)
+        [(widthDivThree, heightDivThreePtwo), (widthDivThreePtwo, height)],         # Región 8 (abajo al centro)
+        [(widthDivThreePtwo, heightDivThreePtwo), (width, height)]                  # Región 9 (abajo a la derecha)
     ]
     
-    # Dibujar las regiones en la imagen
-    for i, (p1, p2) in enumerate(regiones, start=1):
-        cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
-        # Poner texto guía
-        #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-
-    # Convertir la ROI a escala de grises
+    # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Aplicar suavizado para reducir el ruido
     gray_blurred = cv2.GaussianBlur(gray, (9, 9), 2)
 
     # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos) 
-    circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=20, param2=50, minRadius=0, maxRadius=0)
+    circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=175, param2=55, minRadius=0, maxRadius=0)
 
-    if circles is not None:
-        sameCircle = True
+    # Dibujar las regiones en la imagen
+    for i, (p1, p2) in enumerate(regiones, start=1):
+        cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
+        # Poner texto guía
+        #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
         
+    if circles is not None:
+
         # Redondear las coordenadas de los círculos detectados
         circles = np.round(circles[0, :]).astype("int")
         
         for (x_circle, y_circle, r) in circles:
             
-            # Dibujar el círculo y su centro en el fotograma original
-            cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
-            cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
-            
-            # Mostrar la cantidad de círculos detectados
-            detectedCircles += 1
-            print("detectedCircles:", detectedCircles)
-    # else: 
-    # #     sameCircle = False
+            # Guardamos la ubicación actual del círculo
+            actualUbiX = x_circle
+            actualUbiY = y_circle
+
+            # Preguntar si está en el centro la figura
+            if (x_circle >= widthDivThree and x_circle <= widthDivThreePtwo) and (y_circle >= heightDivThree and y_circle <= heightDivThreePtwo):
+        
+                # Dibujar el círculo y su centro en el fotograma original
+                cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
+                cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
+                
+                # Pregunta si es el mismo círculo de la posición pasada
+                if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
+                    # No hace nada xd
+                    pass
+                else:
+                    # Mostrar la cantidad de círculos detectados +1
+                    circlesCount += 1
+                    print("circlesCount:", circlesCount)
+                    
+            # Actualiza la posición del cículo por si está en otra región
+            lastUbiX = actualUbiX 
+            lastUbiY = actualUbiY
+                        
     return image
-
-# def espera():
-#     time.sleep(1)
-#     sameCircle = True
-
-# p = Process(target=espera)
-# p.daemon = True  # Establecer el proceso como demonio para que se detenga cuando el programa principal termine
-# p.start()
 
 # Inicializamos el objeto Tello
 tello = Tello()
@@ -102,8 +110,9 @@ tello.streamon()
 # Obtenemos el frame del video
 frame_read = tello.get_frame_read()
 
-detectedCircles = 0
-sameCircle = False
+circlesCount = 0
+lastUbiX = 0
+lastUbiY = 0
 
 while True:
     # Asignar y leer el fotograma actual de la cámara
@@ -137,7 +146,3 @@ print(
 |                                |
 ----------------------------------
 """)
-    
-
-
-

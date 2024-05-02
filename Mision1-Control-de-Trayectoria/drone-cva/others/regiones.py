@@ -22,7 +22,7 @@ regiones = [
 # Dibujar las regiones en la imagen
 for i, (p1, p2) in enumerate(regiones, start=1):
     cv2.rectangle(image, p1, p2, (255, 0, 0), 2)
-    cv2.putText(image, f"Región {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+    cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
 # Mostrar la imagen con las regiones
 cv2.imshow("Imagen con Regiones", image)
