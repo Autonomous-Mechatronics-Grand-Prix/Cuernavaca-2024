@@ -120,6 +120,7 @@ def detect_figures(image):
                     # Mostrar la cantidad de círculos detectados +1
                     circlesCount += 1
                     print("circlesCount:", circlesCount)
+                    tello.rotate_clockwise(90)
 
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
@@ -174,7 +175,7 @@ def detect_figures(image):
                 elif shape == "Triangle":
                     print("Triangle blue detected")
                     # Dibujar el triángulo en la imagen
-                    #cv2.polylines(image, [contour], isClosed=True, color=(0, 255, 0), thickness=2)
+                    #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
                     # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
                     #cv2.bitwise_and(image, image, mask=[contour])
     # Invertir los colores de la imagen
