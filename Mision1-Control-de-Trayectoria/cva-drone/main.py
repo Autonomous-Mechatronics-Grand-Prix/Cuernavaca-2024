@@ -1,7 +1,10 @@
 # TERMINADO:
 # Malla de regiones.
-# Detecta cículos en el centro.
+# Detecta en el centro:
+#           - cículos
+#           - cuadrados
 # Contador para los Circulos detectados en el centro.
+# Visión humana
 
 # PENDIENTES:
 # Detectar más figuras y moverse
@@ -10,7 +13,7 @@
 
 import numpy as np
 from djitellopy import Tello
-import cv2, math, time
+import cv2, math
 
 # region variables
 
@@ -106,8 +109,8 @@ def detect_figures(image):
 
                 # Dibujar el círculo y su centro en el fotograma original
                 cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
-                cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (0, 128, 255), -1)
-                cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+                cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (255, 128, 0), -1)
+                cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
                 # Pregunta si es el mismo círculo de la posición pasada
                 if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
@@ -164,16 +167,18 @@ def detect_figures(image):
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
                 if shape == "Cuadrado":
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
+                    cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                 if shape == "Cuadrado": pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
                 elif shape == "Triangle":
-                    print("Triangle detected")
+                    print("Triangle blue detected")
                     # Dibujar el triángulo en la imagen
                     #cv2.polylines(image, [contour], isClosed=True, color=(0, 255, 0), thickness=2)
                     # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
-                    cv2.bitwise_and(image, image, mask=[contour])
+                    #cv2.bitwise_and(image, image, mask=[contour])
+    # Invertir los colores de la imagen
+    #image = cv2.bitwise(image)
     return image
 # endregion functions
 
@@ -209,9 +214,9 @@ lastUbiY = 0
 while True:
     # Asignar y leer el fotograma actual de la cámara
     frame = frame_read.frame
-
+    
     # Convert the image from BGR to HSV (Hue, Saturation, Value)
-    hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
     # Tamaño de nuestra ventana
     resize = cv2.resize(frame, (500, 300))
@@ -228,6 +233,9 @@ while True:
 
     # Detectar círculos en el área central de la imagen
     detected_frame = detect_figures(frame)
+    
+    # Regresa la imagen de BGR a RGB
+    detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
     # Mostrar el fotograma con círculos detectados
     cv2.imshow("POV eres el dron", detected_frame)
