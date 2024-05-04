@@ -4,7 +4,8 @@
 #           - cículos
 #           - cuadrados
 # Contador para los Circulos detectados en el centro.
-# Visión humana
+# Visión RGB
+# Estado de la batería
 
 # PENDIENTES:
 # Detectar más figuras y moverse
@@ -16,7 +17,6 @@ from djitellopy import Tello
 import cv2, math
 
 # region variables
-
 # Define a dictionary to store the color ranges
 color_ranges = {
   # (hue_min, sat_min, val_min), (hue_max, sat_max, val_max)
@@ -41,11 +41,9 @@ color_ranges = {
     'upper': np.array([180, 255, 255]) # Maximum values of H, S, V for red color
   }
 }
-
 # endregion variables
 
 # region functions
-
 # function to create a binary mask where pixels within the color range are white and others are black
 def mask_color(image, lower_color, upper_color):
   mask = cv2.inRange(image, lower_color, upper_color)
@@ -57,10 +55,18 @@ def detect_figures(image):
     # Solicitamos las variables globales
     global circlesCount
     global lastUbiX, lastUbiY
+    global actualbattery
 
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
-
+    
+    # Imprime en la cámara el nivel de batería actual
+    if actualbattery > tello.get_battery():
+        actualbattery = tello.get_battery()
+    cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//100), height//12), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
+    cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//80), (height//12)+(height//190)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+        
+    
     widthDivThree = width // 3
     heightDivThree = height // 3
     widthDivThreePtwo = 2 * widthDivThree
@@ -120,7 +126,9 @@ def detect_figures(image):
                     # Mostrar la cantidad de círculos detectados +1
                     circlesCount += 1
                     print("circlesCount:", circlesCount)
-                    tello.rotate_clockwise(90)
+                    #tello.rotate_clockwise(-90)
+                    #tello.move_forward(30)
+                    
 
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
@@ -135,24 +143,29 @@ def detect_figures(image):
     # Draw the contours on the image
     for contour in contours:
         # Aproximar la forma del contorno a una forma más simple
-        epsilon = 0.04 * cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon, True)
+        approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
         sides = len(approx)
         shape = ""
+        # Sacar sus medidas
         x, y, w, h = cv2.boundingRect(approx)
-        blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
-        if sides == 3 and blue_mask is not None:
+        # Sacar el perímetro
+        perimeter = cv2.arcLength(contour, True)
+        
+        #blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
+        #if sides == 3 and blue_mask is not None:
+        
+        if sides == 3:
             # Calcular si es un triángulo equilátero
-            # aspect_ratio = float(w) / h
-            # if 0.90 <= aspect_ratio <= 1.10:
-            shape = "Triangle"
+            if h-0.5 <= perimeter/3 <= h+0.5:
+                shape = "Triangle"
+            
         elif sides == 4:
             # Calcular el rectángulo delimitador para verificar si es un cuadrado
             aspect_ratio = float(w) / h
             if 0.90 <= aspect_ratio <= 1.10:
-                shape = "Cuadrado"
+                shape = "Square"
 
         elif sides == 5:
             #pass
@@ -166,25 +179,30 @@ def detect_figures(image):
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
-                if shape == "Cuadrado":
+                if shape == "Square":
+                    #pass
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
-                if shape == "Cuadrado": pass
+                    cv2.putText(image, "Square", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                    
+                elif shape == "Triangle":
+                    #pass
+                    #print("Triangle blue detected")
+                    # Dibujar el triángulo en la imagen
+                    print("perimeter, h:", perimeter, h)
+                    cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
+                    cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
+                    cv2.putText(image, "Triangle", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+
+                elif shape == "Pentágono": 
+                    pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
-                elif shape == "Triangle":
-                    print("Triangle blue detected")
-                    # Dibujar el triángulo en la imagen
-                    #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
-                    #cv2.bitwise_and(image, image, mask=[contour])
-    # Invertir los colores de la imagen
-    #image = cv2.bitwise(image)
     return image
 # endregion functions
 
-# region main
 
+# region main
 # Inicializamos el objeto Tello
 tello = Tello()
 
@@ -211,6 +229,7 @@ frame_read = tello.get_frame_read()
 circlesCount = 0
 lastUbiX = 0
 lastUbiY = 0
+actualbattery = tello.get_battery()
 
 while True:
     # Asignar y leer el fotograma actual de la cámara
@@ -220,13 +239,13 @@ while True:
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
     # Tamaño de nuestra ventana
-    resize = cv2.resize(frame, (500, 300))
+    resize = cv2.resize(frame, (250, 150))
 
     # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
     key = cv2.waitKey(1)
     if key == 27 or key == ord('q'):
         # Aterriza
-        tello.land()
+        
         break
     elif key == ord('p'):
         # Despega
@@ -250,5 +269,5 @@ print(
 |                                |
 ----------------------------------
 """)
-
+tello.land()
 #endregion main
