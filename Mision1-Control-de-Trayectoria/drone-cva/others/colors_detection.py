@@ -45,7 +45,7 @@ blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['b
 red_mask = mask_color(hsv_image, color_ranges['red']['lower'], color_ranges['red']['upper'])
 
 # Aplicar la máscara a la imagen original para obtener solo las regiones que coinciden con el color deseado
-color_detected_image = cv2.bitwise_and(image, image, mask=orange_mask)
+color_detected_image = cv2.bitwise_and(image, image, mask=red_mask)
 
 # Mostrar la imagen original y la imagen con el color detectado
 cv2.imshow('Original Image', image)
