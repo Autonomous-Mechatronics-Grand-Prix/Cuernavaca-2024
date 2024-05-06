@@ -1,3 +1,4 @@
+# Código para separar una imágen por regiones
 import cv2
 
 # Leer la imagen
