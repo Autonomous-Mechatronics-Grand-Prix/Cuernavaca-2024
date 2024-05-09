@@ -49,6 +49,14 @@ def mask_color(image, lower_color, upper_color):
   mask = cv2.inRange(image, lower_color, upper_color)
   return mask
 
+# Función para aplicar el filtro Canny a un frame
+def aplicar_filtro_canny(frame):
+    # Convertir la imagen a escala de grises
+    gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # Aplicar el filtro Canny
+    bordes = cv2.Canny(gris, 100, 200)
+    return bordes
+
 # Función para detectar círculos en una región de interés (ROI) de la imagen
 def detect_figures(image):
 
@@ -65,8 +73,7 @@ def detect_figures(image):
         actualbattery = tello.get_battery()
     cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//100), height//12), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
     cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//80), (height//12)+(height//190)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
-        
-    
+
     widthDivThree = width // 3
     heightDivThree = height // 3
     widthDivThreePtwo = 2 * widthDivThree
@@ -129,19 +136,20 @@ def detect_figures(image):
                     #tello.rotate_clockwise(-90)
                     #tello.move_forward(30)
                     
-
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
             lastUbiY = actualUbiY
 
     # Apply umbrella filter to detect edges
-    edges = cv2.Canny(gray_blurred, 100, 200)
+    edges = cv2.Canny(gray, 100, 200)
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Draw the contours on the image
     for contour in contours:
+        cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
+        '''
         # Aproximar la forma del contorno a una forma más simple
         approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
 
@@ -197,7 +205,7 @@ def detect_figures(image):
                 elif shape == "Pentágono": 
                     pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
+                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)'''      
     return image
 # endregion functions
 
@@ -245,7 +253,6 @@ while True:
     key = cv2.waitKey(1)
     if key == 27 or key == ord('q'):
         # Aterriza
-        
         break
     elif key == ord('p'):
         # Despega
