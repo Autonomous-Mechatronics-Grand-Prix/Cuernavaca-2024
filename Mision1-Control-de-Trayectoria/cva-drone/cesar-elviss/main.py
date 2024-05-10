@@ -49,14 +49,6 @@ def mask_color(image, lower_color, upper_color):
   mask = cv2.inRange(image, lower_color, upper_color)
   return mask
 
-# Función para aplicar el filtro Canny a un frame
-def aplicar_filtro_canny(frame):
-    # Convertir la imagen a escala de grises
-    gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    # Aplicar el filtro Canny
-    bordes = cv2.Canny(gris, 100, 200)
-    return bordes
-
 # Función para detectar círculos en una región de interés (ROI) de la imagen
 def detect_figures(image):
 
@@ -67,12 +59,13 @@ def detect_figures(image):
 
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
-    
+
     # Imprime en la cámara el nivel de batería actual
     if actualbattery > tello.get_battery():
         actualbattery = tello.get_battery()
     cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//100), height//12), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
     cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//80), (height//12)+(height//190)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+
 
     widthDivThree = width // 3
     heightDivThree = height // 3
@@ -135,21 +128,20 @@ def detect_figures(image):
                     print("circlesCount:", circlesCount)
                     #tello.rotate_clockwise(-90)
                     #tello.move_forward(30)
-                    
+
+
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
             lastUbiY = actualUbiY
 
     # Apply umbrella filter to detect edges
-    edges = cv2.Canny(gray, 100, 200)
+    edges = cv2.Canny(gray_blurred, 100, 200)
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Draw the contours on the image
     for contour in contours:
-        cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
-        '''
         # Aproximar la forma del contorno a una forma más simple
         approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
 
@@ -160,15 +152,15 @@ def detect_figures(image):
         x, y, w, h = cv2.boundingRect(approx)
         # Sacar el perímetro
         perimeter = cv2.arcLength(contour, True)
-        
+
         #blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
         #if sides == 3 and blue_mask is not None:
-        
+
         if sides == 3:
             # Calcular si es un triángulo equilátero
             if h-0.5 <= perimeter/3 <= h+0.5:
                 shape = "Triangle"
-            
+
         elif sides == 4:
             # Calcular el rectángulo delimitador para verificar si es un cuadrado
             aspect_ratio = float(w) / h
@@ -192,7 +184,7 @@ def detect_figures(image):
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Square", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                    
+
                 elif shape == "Triangle":
                     #pass
                     #print("Triangle blue detected")
@@ -202,10 +194,10 @@ def detect_figures(image):
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Triangle", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
-                elif shape == "Pentágono": 
+                elif shape == "Pentágono":
                     pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)'''      
+                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
     return image
 # endregion functions
 
@@ -242,7 +234,7 @@ actualbattery = tello.get_battery()
 while True:
     # Asignar y leer el fotograma actual de la cámara
     frame = frame_read.frame
-    
+
     # Convert the image from BGR to HSV (Hue, Saturation, Value)
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
@@ -253,6 +245,7 @@ while True:
     key = cv2.waitKey(1)
     if key == 27 or key == ord('q'):
         # Aterriza
+
         break
     elif key == ord('p'):
         # Despega
@@ -260,7 +253,7 @@ while True:
 
     # Detectar círculos en el área central de la imagen
     detected_frame = detect_figures(frame)
-    
+
     # Regresa la imagen de BGR a RGB
     detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
