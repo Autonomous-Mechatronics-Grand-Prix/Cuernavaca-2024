@@ -2,10 +2,7 @@ import cv2
 import numpy as np
 
 # read the images with colored figures
-image = cv2.imread('shapes.jpg')
-
-# Convert the image from BGR to HSV (Hue, Saturation, Value)
-hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+cap = cv2.VideoCapture(0)
 
 # Define a dictionary to store the color ranges
 color_ranges = {
@@ -32,23 +29,50 @@ color_ranges = {
   }
 }
 
-def mask_color(image, lower_color, upper_color):
+def color_detection(image, color):
+  # Convert the image from BGR to HSV
+  hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+  # Access the color range from the dictionary
+  color_range = color_ranges[color]
+
   # Create a binary mask where pixels within the color range are white and others are black
-  mask = cv2.inRange(image, lower_color, upper_color)
-  return mask
+  mask = cv2.inRange(hsv_image, color_range['lower'], color_range['upper'])
 
-# Access the red color range from the dictionary
-orange_mask = mask_color(hsv_image, color_ranges['orange']['lower'], color_ranges['orange']['upper'])
-yellow_mask = mask_color(hsv_image, color_ranges['yellow']['lower'], color_ranges['yellow']['upper'])
-green_mask = mask_color(hsv_image, color_ranges['green']['lower'], color_ranges['green']['upper'])
-blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
-red_mask = mask_color(hsv_image, color_ranges['red']['lower'], color_ranges['red']['upper'])
+  # Apply the mask to the original image to get only the regions that match the desired color
+  color_detected_image = cv2.bitwise_and(image, image, mask=mask)
 
-# Aplicar la máscara a la imagen original para obtener solo las regiones que coinciden con el color deseado
-color_detected_image = cv2.bitwise_and(image, image, mask=red_mask)
+  # Check if the mask contains any non-zero values
+  if cv2.countNonZero(mask) > 0:
+    print(f'{color} color detected')
+  else:
+    print(f'{color} color not detected')
 
-# Mostrar la imagen original y la imagen con el color detectado
-cv2.imshow('Original Image', image)
-cv2.imshow('Color Detected Image', color_detected_image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+  return color_detected_image
+
+def main():
+  while True:
+    # Lee el frame actual de la cámara
+    ret, frame = cap.read()
+
+    if not ret:
+      break
+
+    # Detect the color 'orange' in the image
+    green = color_detection(frame, 'green')
+    blue = color_detection(frame, 'blue')
+
+    # show the original image and the image with the detected color
+    cv2.imshow('Original Image', frame)
+    cv2.imshow('Color green detected', green)
+    cv2.imshow('Color blue detected', blue)
+
+    # Break the loop on 'q' key press
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+      break
+
+  cap.release()
+  cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+  main()
