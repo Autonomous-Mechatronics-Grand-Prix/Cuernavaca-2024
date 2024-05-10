@@ -2,12 +2,12 @@
 # Malla de regiones.
 # Detecta en el centro:
 #           - cículos
-#           - cuadrados
 # Contador para los Circulos detectados en el centro.
 # Visión RGB
 # Estado de la batería
 
 # PENDIENTES:
+#           - cuadrados
 # Detectar más figuras y moverse
 # Detectar colores
 # Interfaz web
@@ -205,7 +205,12 @@ def detect_figures(image):
                 elif shape == "Pentágono": 
                     pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)'''      
+                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)'''     
+
+
+
+        ""
+         
     return image
 # endregion functions
 
