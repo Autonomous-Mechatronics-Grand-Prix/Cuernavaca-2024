@@ -1,13 +1,19 @@
 import cv2
 import numpy as np
 
-# Leer la imagen en escala de grises
-img = cv2.imread('imagen.jpg', cv2.IMREAD_GRAYSCALE)
+# Leer la imagen en color
+img = cv2.imread('imagen.jpg')
 
-# Aplicar umbral para obtener una imagen binaria
-_, thresh = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+# Convertir la imagen a escala de grises
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-# Encontrar contornos en la imagen binaria
+# Aplicar un desenfoque gaussiano para reducir el ruido
+blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+# Aplicar un umbral adaptativo para binarizar la imagen
+thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+
+# Encontrar contornos en la imagen binarizada
 contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 # Iterar sobre los contornos encontrados
@@ -18,7 +24,7 @@ for contour in contours:
     # Calcular el número de lados de la figura aproximada
     sides = len(approx)
     
-    # Determinar la forma de la figura basada en el número de lados
+    # Determinar el tipo de forma basado en el número de lados
     shape = ""
     if sides == 3:
         shape = "Triángulo"
@@ -30,14 +36,12 @@ for contour in contours:
             shape = "Cuadrado"
         else:
             shape = "Rectángulo"
-    elif sides > 4:
-        shape = "Círculo o figura compleja"
     
     # Dibujar la forma detectada y mostrar su tipo
     cv2.drawContours(img, [contour], -1, (0, 255, 0), 2)
     cv2.putText(img, shape, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-# Mostrar la imagen con las figuras detectadas
-cv2.imshow('Figuras Detectadas', img)
+# Mostrar la imagen con las formas detectadas
+cv2.imshow('Formas Detectadas', img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
