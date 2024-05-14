@@ -17,6 +17,11 @@ from djitellopy import Tello
 import cv2, math
 
 # region variables
+
+circlesCount = 0
+lastUbiX = 0
+lastUbiY = 0
+
 # Define a dictionary to store the color ranges
 color_ranges = {
   # (hue_min, sat_min, val_min), (hue_max, sat_max, val_max)
@@ -41,21 +46,43 @@ color_ranges = {
     'upper': np.array([180, 255, 255]) # Maximum values of H, S, V for red color
   }
 }
+
 # endregion variables
 
 # region functions
-# function to create a binary mask where pixels within the color range are white and others are black
-def mask_color(image, lower_color, upper_color):
-  mask = cv2.inRange(image, lower_color, upper_color)
-  return mask
 
-# Función para aplicar el filtro Canny a un frame
-def aplicar_filtro_canny(frame):
-    # Convertir la imagen a escala de grises
-    gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    # Aplicar el filtro Canny
-    bordes = cv2.Canny(gris, 100, 200)
-    return bordes
+# function to show the battery level in the camera
+def show_batery(actualbattery, image, height, width):
+
+    if actualbattery > tello.get_battery():
+        actualbattery = tello.get_battery()
+    cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//100), height//12), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
+    cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//80), (height//12)+(height//190)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+
+    return image
+
+# function to detect the color of the figures
+def color_detection(image, color):
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    # Convert the image from BGR to HSV
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Access the color range from the dictionary
+    color_range = color_ranges[color]
+
+    # Create a binary mask where pixels within the color range are white and others are black
+    mask = cv2.inRange(hsv_image, color_range['lower'], color_range['upper'])
+
+    # Apply the mask to the original image to get only the regions that match the desired color
+    color_detected_image = cv2.bitwise_and(image, image, mask=mask)
+
+    # Check if the mask contains any non-zero values
+    if cv2.countNonZero(mask) > 0:
+        print(f'{color} color detected')
+    else:
+        print(f'{color} color not detected')
+
+    return color_detected_image
 
 # Función para detectar círculos en una región de interés (ROI) de la imagen
 def detect_figures(image):
@@ -69,12 +96,8 @@ def detect_figures(image):
     
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
-    
-    # Imprime en la cámara el nivel de batería actual
-    if actualbattery > tello.get_battery():
-        actualbattery = tello.get_battery()
-    cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//100), height//12), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
-    cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//80), (height//12)+(height//190)), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+
+    show_batery(actualbattery, image, height, width)
 
     widthDivThree = width // 3
     heightDivThree = height // 3
@@ -109,6 +132,10 @@ def detect_figures(image):
         # Poner texto guía
         #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
+    green = color_detection(image, 'green')
+
+    cv2.imshow("Green color detected", green)
+
     if circles is not None:
 
         # Redondear las coordenadas de los círculos detectados
@@ -123,30 +150,33 @@ def detect_figures(image):
             # Preguntar si está en el centro la figura
             if (x_circle >= widthDivThree and x_circle <= widthDivThreePtwo) and (y_circle >= heightDivThree and y_circle <= heightDivThreePtwo):
 
-                # Dibujar el círculo y su centro en el fotograma original
-                cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
-                cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (255, 128, 0), -1)
-                cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                if green is not None:
+                    # Dibujar el círculo y su centro en el fotograma original
+                    cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
+                    cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (255, 128, 0), -1)
+                    cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                    # poner a lado del cirfculo que es color verde
+                    cv2.putText(image, "Green", (x_circle + 100, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
-                # Pregunta si es el mismo círculo de la posición pasada
-                if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
-                    # No hace nada xd
-                    pass
-                else:
-                    # Mostrar la cantidad de círculos detectados +1
-                    figureFree = False
-                    circlesCount += 1
-                    print("circlesCount:", circlesCount)
-                    #tello.rotate_clockwise(-90)
-                    # tello.move_forward(30)
-                    #tello.land()
+                    # Pregunta si es el mismo círculo de la posición pasada
+                    if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
+                        # No hace nada xd
+                        pass
+                    else:
+                        # Mostrar la cantidad de círculos detectados +1
+                        figureFree = False
+                        circlesCount += 1
+                        print("circlesCount:", circlesCount)
+                        #tello.rotate_clockwise(-90)
+                        #tello.move_forward(30)
+                        #tello.land()
                     
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
             lastUbiY = actualUbiY
 
     # Apply umbrella filter to detect edges
-    edges = cv2.Canny(gray, 100, 200)
+    edges = cv2.Canny(gray_blurred, 100, 200)
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -168,7 +198,7 @@ def detect_figures(image):
         
         #blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
         #if sides == 3 and blue_mask is not None:
-        
+
         if sides == 3:
             # Calcular si es un triángulo equilátero
             #if h-0.5 <= perimeter/3 <= h+0.5:
@@ -215,65 +245,76 @@ def detect_figures(image):
                     cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)'''
                       
     return image
+
 # endregion functions
 
-
 # region main
-# Inicializamos el objeto Tello
-tello = Tello()
 
-# Conectamos con el Tello
-tello.connect()
+if __name__ == '__main__':
+    # Inicializamos el objeto Tello
+    tello = Tello()
 
-# Imprimimos la batería (tiene que ser mayor al 20%)
-print(
-"""
-+================================+
-|                                |
-| Despegando...                  |
-| Nivel actual de carga:""", tello.get_battery(), """%    |
-|                                |
-+================================+
-""")
+    # Conectamos con el Tello
+    tello.connect()
 
-# Iniciamos el streaming de video
-tello.streamon()
+    actualbattery = tello.get_battery()
 
-# Obtenemos el frame del video
-frame_read = tello.get_frame_read()
+    # Imprimimos la batería (tiene que ser mayor al 20%)
+    print(
+    """
+    +================================+
+    |                                |
+    | Despegando...                  |
+    | Nivel actual de carga:""", tello.get_battery(), """%    |
+    |                                |
+    +================================+
+    """)
 
-circlesCount = 0
-lastUbiX = 0
-lastUbiY = 0
-actualbattery = tello.get_battery()
+    # Iniciamos el streaming de video
+    tello.streamon()
 
-while True:
-    # Asignar y leer el fotograma actual de la cámara
-    frame = frame_read.frame
-    
-    # Convert the image from BGR to HSV (Hue, Saturation, Value)
-    hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+    # Obtenemos el frame del video
+    frame_read = tello.get_frame_read()
 
-    # Tamaño de nuestra ventana
-    resize = cv2.resize(frame, (250, 150))
+    while True:
+        # Asignar y leer el fotograma actual de la cámara
+        frame = frame_read.frame
 
-    # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
-    key = cv2.waitKey(1)
-    if key == 27 or key == ord('q'):
-        # Aterriza
-        break
-    elif key == ord('p'):
-        # Despega
-        tello.takeoff()
+        # Convert the image from BGR to HSV (Hue, Saturation, Value)
+        hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
-    # Detectar círculos en el área central de la imagen
-    detected_frame = detect_figures(frame)
-    
-    # Regresa la imagen de BGR a RGB
-    detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
+        # Tamaño de nuestra ventana
+        resize = cv2.resize(frame, (250, 150))
 
-    # Mostrar el fotograma con círculos detectados
-    cv2.imshow("POV eres el dron", detected_frame)
+        # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
+        key = cv2.waitKey(1)
+        if key == 27 or key == ord('q'):
+            # Aterriza
+
+            break
+        elif key == ord('p'):
+            # Despega
+            tello.takeoff()
+
+        # Detectar círculos en el área central de la imagen
+        detected_frame = detect_figures(frame)
+
+        # Regresa la imagen de BGR a RGB
+        detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
+
+        # Mostrar el fotograma con círculos detectados
+        cv2.imshow("POV eres el dron", detected_frame)
+
+    print(
+    """
+    ----------------------------------
+    |                                |
+    | Aterrizando...                 |
+    | Nivel final de carga:""", tello.get_battery(), """%     |
+    |                                |
+    ----------------------------------
+    """)
+    tello.land()
 
 tello.land()
 print(
