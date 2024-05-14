@@ -75,10 +75,10 @@ def color_detection(image, color):
     color_detected_image = cv2.bitwise_and(image, image, mask=mask)
 
     # Check if the mask contains any non-zero values
-    if cv2.countNonZero(mask) > 0:
+    '''if cv2.countNonZero(mask) > 0:
         print(f'{color} color detected')
     else:
-        print(f'{color} color not detected')
+        print(f'{color} color not detected')'''
 
     return color_detected_image
 
@@ -183,7 +183,7 @@ def detect_figures(image):
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
         
         # Aproximar la forma del contorno a una forma más simple
-        approx = cv2.approxPolyDP(contour, 0.004 * cv2.arcLength(contour, True), True)
+        approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
         sides = len(approx)
@@ -219,14 +219,14 @@ def detect_figures(image):
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
-                if shape == "Square" and figureFree:
+                if shape == "Square":
                     #pass
                     #cv2.drawContours(frame, contours, 4, (0, 255, 0), 2)
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Square", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
                     
-                elif shape == "Triangle" and figureFree:
+                elif shape == "Triangle":
                     #pass
                     #print("Triangle blue detected")
                     # Dibujar el triángulo en la imagen

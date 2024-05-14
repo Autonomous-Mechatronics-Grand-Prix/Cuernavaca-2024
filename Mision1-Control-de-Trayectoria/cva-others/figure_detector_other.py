@@ -1,3 +1,4 @@
+# Otro detector de figuras
 import cv2
 import numpy as np
 
