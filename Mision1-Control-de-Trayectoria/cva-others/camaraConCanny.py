@@ -5,8 +5,12 @@ import cv2
 def aplicar_filtro_canny(frame):
     # Convertir la imagen a escala de grises
     gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    #Suavizado para quitar el ruido
+    #gray_blurred = cv2.GaussianBlur(gris, (9, 9), 2)
+    
     # Aplicar el filtro Canny
-    bordes = cv2.Canny(gris, 100, 200)
+    bordes = cv2.Canny(gray_blurred, 100, 200)
     return bordes
 
 # Iniciar la captura de video desde la cámara de la computadora
