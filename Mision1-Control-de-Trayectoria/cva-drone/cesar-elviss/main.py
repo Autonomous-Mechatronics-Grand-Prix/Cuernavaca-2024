@@ -2,12 +2,12 @@
 # Malla de regiones.
 # Detecta en el centro:
 #           - cículos
-#           - cuadrados
 # Contador para los Circulos detectados en el centro.
 # Visión RGB
 # Estado de la batería
 
 # PENDIENTES:
+#           - cuadrados
 # Detectar más figuras y moverse
 # Detectar colores
 # Interfaz web
@@ -17,10 +17,9 @@ from djitellopy import Tello
 import cv2, math
 
 # region variables
-
 circlesCount = 0
 lastUbiX = 0
-lastUbiY = 0
+lastUbiY = 0 
 
 # Define a dictionary to store the color ranges
 color_ranges = {
@@ -46,11 +45,10 @@ color_ranges = {
     'upper': np.array([180, 255, 255]) # Maximum values of H, S, V for red color
   }
 }
-
 # endregion variables
 
-# region functions
 
+# region functions
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
 
@@ -245,11 +243,10 @@ def detect_figures(image):
                     cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)'''
                       
     return image
-
 # endregion functions
 
-# region main
 
+# region main
 if __name__ == '__main__':
     # Inicializamos el objeto Tello
     tello = Tello()
@@ -305,6 +302,7 @@ if __name__ == '__main__':
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
 
+    tello.land()
     print(
     """
     ----------------------------------
@@ -314,16 +312,4 @@ if __name__ == '__main__':
     |                                |
     ----------------------------------
     """)
-    tello.land()
-
-tello.land()
-print(
-"""
-----------------------------------
-|                                |
-| Aterrizando...                 |
-| Nivel final de carga:""", tello.get_battery(), """%     |
-|                                |
-----------------------------------
-""")
 #endregion main
