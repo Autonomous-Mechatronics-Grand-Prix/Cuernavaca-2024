@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # Cargar la imagen utilizando OpenCV
-image = cv2.imread('imagen.jpg')
+image = cv2.imread('ima.jpg')
 
 # Convertir la imagen a escala de grises
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -17,7 +17,7 @@ contours, _ = cv2.findContours(bordes, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPL
 # Iterar sobre cada contorno encontrado
 for contour in contours:
     # Aproximar el contorno a una forma más simple (triángulo, cuadrado, círculo, etc.)
-    approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+    approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
     # Calcular el número de lados de la figura aproximada
     sides = len(approx)
@@ -25,18 +25,18 @@ for contour in contours:
     # Determinar el tipo de figura geométrica en función del número de lados
     shape = ""
     if sides == 3:
-        shape = "Triángulo"
+        shape = "Triangulo"
     elif sides == 4:
-        shape = "Cuadrilátero"
+        shape = "Cuadrilatero"
     elif sides == 5:
-        shape = "Pentágono"
+        shape = "Pentagono"
     elif sides == 6:
-        shape = "Hexágono"
+        shape = "Hexagono"
     else:
-        shape = "Círculo"
+        shape = "Circulo"
 
     # Dibujar un contorno alrededor de la figura identificada
-    cv2.drawContours(image, [contour], 0, (255, 0, 0), 2)
+    cv2.drawContours(image, [contour], 0, (0, 255, 0), 2)
 
     # Obtener el centroide de la figura
     M = cv2.moments(contour)

@@ -8,7 +8,8 @@
 
 # PENDIENTES:
 #           - cuadrados
-# Detectar más figuras y moverse
+#           - triángulos
+#           - pentágonos
 # Detectar colores
 # Interfaz web
 
@@ -173,7 +174,7 @@ def detect_figures(image):
             lastUbiY = actualUbiY
 
     # Apply umbrella filter to detect edges
-    edges = cv2.Canny(gray_blurred, 100, 200)
+    edges = cv2.Canny(gray_blurred, 49, 50)
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -183,7 +184,7 @@ def detect_figures(image):
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
         
         # Aproximar la forma del contorno a una forma más simple
-        approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+        approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
         sides = len(approx)
@@ -234,14 +235,20 @@ def detect_figures(image):
                     #cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Triangle", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                '''
-                elif shape == "Pentágono" and figureFree: 
+                
+                elif shape == "Pentágono": 
                     #pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
-                    cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)'''
+                    cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
+                    cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
                       
     return image
+
+# Función para aplicar el filtro Canny a un frame
+def aplicar_filtro_canny(frame):
+    # Aplicar el filtro Canny
+    bordes = cv2.Canny(frame, 49, 50)
+    return bordes
 # endregion functions
 
 
@@ -300,6 +307,9 @@ if __name__ == '__main__':
 
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
+        
+        # Mostrar el fotograma con canny
+        cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(detected_frame))
 
     tello.land()
     print(
