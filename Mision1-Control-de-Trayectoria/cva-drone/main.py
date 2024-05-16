@@ -8,7 +8,8 @@
 
 # PENDIENTES:
 #           - cuadrados
-# Detectar más figuras y moverse
+#           - triángulos
+#           - pentágonos
 # Detectar colores
 # Interfaz web
 
@@ -61,7 +62,9 @@ def show_batery(actualbattery, image, height, width):
 
 # function to detect the color of the figures
 def color_detection(image, color):
+    
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    
     # Convert the image from BGR to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -173,7 +176,7 @@ def detect_figures(image):
             lastUbiY = actualUbiY
 
     # Apply umbrella filter to detect edges
-    edges = cv2.Canny(gray_blurred, 100, 200)
+    edges = cv2.Canny(gray_blurred, 49, 50)
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -183,7 +186,7 @@ def detect_figures(image):
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
         
         # Aproximar la forma del contorno a una forma más simple
-        approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+        '''approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
         sides = len(approx)
@@ -234,14 +237,51 @@ def detect_figures(image):
                     #cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Triangle", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                '''
-                elif shape == "Pentágono" and figureFree: 
+                
+                elif shape == "Pentágono": 
                     #pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
+                    cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)'''
-                      
+                 
     return image
+
+# Función para aplicar el filtro Canny a un frame
+def aplicar_filtro_canny(frame):
+    # Aplicar el filtro Canny
+    bordes = cv2.Canny(frame, 49, 50)
+    return bordes
+
+# Detector de líneas
+def line_detector(frame):
+    # Obtener las dimensiones del fotograma
+    #height, width = frame.shape[:2]
+    
+    # Convertir la imagen a escala de grises
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    #Suavizado para quitar el ruido
+    gray_blurred = cv2.GaussianBlur(gray, (9, 9), 4)
+
+    # Aplicar el detector de bordes Canny para resaltar los bordes
+    edges = cv2.Canny(gray_blurred, 50, 150, apertureSize=3)
+
+    # Aplicar la transformada de Hough para detectar líneas
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 150)
+
+    # Dibujar las líneas detectadas en la imagen original
+    if lines is not None:
+        for rho, theta in lines[:, 0]:
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            x1 = int(x0 + 1000 * (-b))
+            y1 = int(y0 + 1000 * (a))
+            x2 = int(x0 - 1000 * (-b))
+            y2 = int(y0 - 1000 * (a))
+            cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    return frame
 # endregion functions
 
 
@@ -292,6 +332,9 @@ if __name__ == '__main__':
             # Despega
             tello.takeoff()
 
+        # Detectar el camino
+        line_frame = line_detector(frame)
+
         # Detectar círculos en el área central de la imagen
         detected_frame = detect_figures(frame)
 
@@ -300,6 +343,12 @@ if __name__ == '__main__':
 
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
+        
+        # Mostrar el camino
+        #cv2.imshow("POV camino del dron", line_frame)
+        
+        # Mostrar el fotograma con canny
+        #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
 
     tello.land()
     print(

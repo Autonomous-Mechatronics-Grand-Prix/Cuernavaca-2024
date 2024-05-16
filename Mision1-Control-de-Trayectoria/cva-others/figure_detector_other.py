@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # Leer la imagen en color
-img = cv2.imread('imagen.jpg')
+img = cv2.imread('ima.jpg')
 
 # Convertir la imagen a escala de grises
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
