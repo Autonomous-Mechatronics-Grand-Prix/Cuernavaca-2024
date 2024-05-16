@@ -1,0 +1,79 @@
+div.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+}
+
+main.main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 82%;
+}
+
+video.video {
+  width: 70%;
+  height: 100%;
+}
+
+aside.aside {
+  width: 30%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: center;
+}
+
+aside.aside h2.h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+aside.aside div.controls,
+aside.aside div.statics {
+  height: 50%;
+}
+
+aside.aside div.controls div.controlsContainer,
+aside.aside div.statics div.staticsContainer {
+  width: 100%;
+  height: 90%;
+  background-color: #e4e4e77c;
+  border-radius: .5rem;
+  -webkit-border-radius: .5rem;
+  -moz-border-radius: .5rem;
+  -ms-border-radius: .5rem;
+  -o-border-radius: .5rem;
+}
+
+/* aside.aside button.button {
+  width: 100%;
+  height: 10%;
+  background-color: #12aaa5;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+} */
+
+footer.footer {
+  width: 100%;
+  height: 8%;
+  border-top: 1px solid #e4e4e7;
+}
+
+footer.footer img {
+  width: 2rem;
+}
