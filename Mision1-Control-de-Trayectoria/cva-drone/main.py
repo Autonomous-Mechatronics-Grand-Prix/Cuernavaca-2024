@@ -20,7 +20,7 @@ import cv2, math
 # region variables
 circlesCount = 0
 lastUbiX = 0
-lastUbiY = 0 
+lastUbiY = 0
 
 # Define a dictionary to store the color ranges
 color_ranges = {
@@ -90,9 +90,9 @@ def detect_figures(image):
     global circlesCount
     global lastUbiX, lastUbiY
     global actualbattery
-    
+
     figureFree = True
-    
+
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
 
@@ -168,7 +168,7 @@ def detect_figures(image):
                         #tello.rotate_clockwise(-90)
                         #tello.move_forward(30)
                         #tello.land()
-                    
+
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
             lastUbiY = actualUbiY
@@ -178,11 +178,11 @@ def detect_figures(image):
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
+
     # Draw the contours on the image
     for contour in contours:
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-        
+
         # Aproximar la forma del contorno a una forma más simple
         approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
@@ -193,7 +193,7 @@ def detect_figures(image):
         x, y, w, h = cv2.boundingRect(approx)
         # Sacar el perímetro
         #perimeter = cv2.arcLength(contour, True)
-        
+
         #blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
         #if sides == 3 and blue_mask is not None:
 
@@ -201,7 +201,7 @@ def detect_figures(image):
             # Calcular si es un triángulo equilátero
             #if h-0.5 <= perimeter/3 <= h+0.5:
             shape = "Triangle"
-            
+
         elif sides == 4:
             # Calcular el rectángulo delimitador para verificar si es un cuadrado
             aspect_ratio = float(w) / h
@@ -226,7 +226,7 @@ def detect_figures(image):
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Square", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                    
+
                 elif shape == "Triangle":
                     #pass
                     #print("Triangle blue detected")
@@ -235,13 +235,13 @@ def detect_figures(image):
                     #cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Triangle", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                
-                elif shape == "Pentágono": 
+
+                elif shape == "Pentágono":
                     #pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                      
+
     return image
 
 # Función para aplicar el filtro Canny a un frame
@@ -307,7 +307,7 @@ if __name__ == '__main__':
 
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
-        
+
         # Mostrar el fotograma con canny
         cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(detected_frame))
 
