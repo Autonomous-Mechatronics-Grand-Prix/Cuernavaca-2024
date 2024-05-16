@@ -59,13 +59,11 @@ def main():
       break
 
     # Detect the color 'orange' in the image
-    green = color_detection(frame, 'green')
-    blue = color_detection(frame, 'blue')
+    orange = color_detection(frame, 'orange')
 
     # show the original image and the image with the detected color
     cv2.imshow('Original Image', frame)
-    cv2.imshow('Color green detected', green)
-    cv2.imshow('Color blue detected', blue)
+    cv2.imshow('Color orange detected', orange)
 
     # Break the loop on 'q' key press
     if cv2.waitKey(1) & 0xFF == ord('q'):
