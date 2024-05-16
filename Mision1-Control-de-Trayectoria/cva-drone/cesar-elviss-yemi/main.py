@@ -2,13 +2,14 @@
 # Malla de regiones.
 # Detecta en el centro:
 #           - cículos
-#           - cuadrados
 # Contador para los Circulos detectados en el centro.
 # Visión RGB
 # Estado de la batería
 
 # PENDIENTES:
-# Detectar más figuras y moverse
+#           - cuadrados
+#           - triángulos
+#           - pentágonos
 # Detectar colores
 # Interfaz web
 
@@ -17,7 +18,6 @@ from djitellopy import Tello
 import cv2, math
 
 # region variables
-
 circlesCount = 0
 lastUbiX = 0
 lastUbiY = 0
@@ -46,11 +46,10 @@ color_ranges = {
     'upper': np.array([180, 255, 255]) # Maximum values of H, S, V for red color
   }
 }
-
 # endregion variables
 
-# region functions
 
+# region functions
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
 
@@ -63,7 +62,9 @@ def show_batery(actualbattery, image, height, width):
 
 # function to detect the color of the figures
 def color_detection(image, color):
+
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
     # Convert the image from BGR to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -77,10 +78,10 @@ def color_detection(image, color):
     color_detected_image = cv2.bitwise_and(image, image, mask=mask)
 
     # Check if the mask contains any non-zero values
-    if cv2.countNonZero(mask) > 0:
+    '''if cv2.countNonZero(mask) > 0:
         print(f'{color} color detected')
     else:
-        print(f'{color} color not detected')
+        print(f'{color} color not detected')'''
 
     return color_detected_image
 
@@ -91,6 +92,8 @@ def detect_figures(image):
     global circlesCount
     global lastUbiX, lastUbiY
     global actualbattery
+
+    figureFree = True
 
     # Obtener las dimensiones del fotograma
     height, width = image.shape[:2]
@@ -119,6 +122,7 @@ def detect_figures(image):
 
     # Aplicar suavizado para reducir el ruido
     gray_blurred = cv2.GaussianBlur(gray, (9, 9), 2)
+    #gray_blurred=gray
 
     # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos)
     circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=175, param2=55, minRadius=0, maxRadius=0)
@@ -130,8 +134,7 @@ def detect_figures(image):
         #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
     green = color_detection(image, 'green')
-
-    cv2.imshow("Green color detected", green)
+    #cv2.imshow("Green color detected", green)
 
     if circles is not None:
 
@@ -153,7 +156,7 @@ def detect_figures(image):
                     cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (255, 128, 0), -1)
                     cv2.putText(image, "Circle", (x_circle, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
                     # poner a lado del cirfculo que es color verde
-                    cv2.putText(image, "Green", (x_circle + 100, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                    #cv2.putText(image, "Green", (x_circle + 100, y_circle), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
                     # Pregunta si es el mismo círculo de la posición pasada
                     if (lastUbiX >= widthDivThree and lastUbiX <= widthDivThreePtwo) and (lastUbiY >= heightDivThree and lastUbiY <= heightDivThreePtwo):
@@ -161,25 +164,29 @@ def detect_figures(image):
                         pass
                     else:
                         # Mostrar la cantidad de círculos detectados +1
+                        figureFree = False
                         circlesCount += 1
                         print("circlesCount:", circlesCount)
-                        tello.rotate_clockwise(-90)
+                        #tello.rotate_clockwise(-90)
                         #tello.move_forward(30)
+                        #tello.land()
 
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
             lastUbiY = actualUbiY
 
     # Apply umbrella filter to detect edges
-    edges = cv2.Canny(gray_blurred, 100, 200)
+    edges = cv2.Canny(gray_blurred, 49, 50)
 
     # Find contours in the umbrellaed image
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Draw the contours on the image
     for contour in contours:
+        #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
+
         # Aproximar la forma del contorno a una forma más simple
-        approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
+        '''approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
         sides = len(approx)
@@ -187,14 +194,15 @@ def detect_figures(image):
         # Sacar sus medidas
         x, y, w, h = cv2.boundingRect(approx)
         # Sacar el perímetro
-        perimeter = cv2.arcLength(contour, True)
+        #perimeter = cv2.arcLength(contour, True)
 
+        #blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
         #if sides == 3 and blue_mask is not None:
 
         if sides == 3:
             # Calcular si es un triángulo equilátero
-            if h-0.5 <= perimeter/3 <= h+0.5:
-                shape = "Triangle"
+            #if h-0.5 <= perimeter/3 <= h+0.5:
+            shape = "Triangle"
 
         elif sides == 4:
             # Calcular el rectángulo delimitador para verificar si es un cuadrado
@@ -216,6 +224,7 @@ def detect_figures(image):
             if (cX >= widthDivThree and cX <= widthDivThreePtwo) and (cY >= heightDivThree and cY <= heightDivThreePtwo):
                 if shape == "Square":
                     #pass
+                    #cv2.drawContours(frame, contours, 4, (0, 255, 0), 2)
                     cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Square", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
@@ -224,21 +233,60 @@ def detect_figures(image):
                     #pass
                     #print("Triangle blue detected")
                     # Dibujar el triángulo en la imagen
-                    print("perimeter, h:", perimeter, h)
-                    cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
+                    #print("perimeter, h:", perimeter, h)
+                    #cv2.drawContours(frame, contours, 1, (0, 255, 0), 2)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Triangle", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
                 elif shape == "Pentágono":
-                    pass
+                    #pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
-                    # cv2.circle(image, (cX, cY), (x+w)//100, (0, 128, 255), -1)
+                    cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
+                    cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)'''
+
     return image
 
+# Función para aplicar el filtro Canny a un frame
+def aplicar_filtro_canny(frame):
+    # Aplicar el filtro Canny
+    bordes = cv2.Canny(frame, 49, 50)
+    return bordes
+
+# Detector de líneas
+def line_detector(frame):
+    # Obtener las dimensiones del fotograma
+    #height, width = frame.shape[:2]
+
+    # Convertir la imagen a escala de grises
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    #Suavizado para quitar el ruido
+    #gray_blurred = cv2.GaussianBlur(gray, (9, 9), 4)
+    gray_blurred = gray
+
+    # Aplicar el detector de bordes Canny para resaltar los bordes
+    edges = cv2.Canny(gray_blurred, 50, 150, apertureSize=3)
+
+    # Aplicar la transformada de Hough para detectar líneas
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 150)
+
+    # Dibujar las líneas detectadas en la imagen original
+    if lines is not None:
+        for rho, theta in lines[:, 0]:
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            x1 = int(x0 + 1000 * (-b))
+            y1 = int(y0 + 1000 * (a))
+            x2 = int(x0 - 1000 * (-b))
+            y2 = int(y0 - 1000 * (a))
+            cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    #return frame
 # endregion functions
 
-# region main
 
+# region main
 if __name__ == '__main__':
     # Inicializamos el objeto Tello
     tello = Tello()
@@ -277,13 +325,20 @@ if __name__ == '__main__':
 
         # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
         key = cv2.waitKey(1)
+        # Aterriza
         if key == 27 or key == ord('q'):
-            # Aterriza
-
             break
+        
+        # Despega
         elif key == ord('p'):
-            # Despega
             tello.takeoff()
+        
+        # Sube más
+        elif key == ord('r'):
+            tello.move_up(30)
+
+        # Detectar el camino
+        line_frame = line_detector(frame)
 
         # Detectar círculos en el área central de la imagen
         detected_frame = detect_figures(frame)
@@ -294,6 +349,13 @@ if __name__ == '__main__':
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
 
+        # Mostrar el camino
+        #cv2.imshow("POV camino del dron", line_frame)
+
+        # Mostrar el fotograma con canny
+        #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
+
+    tello.land()
     print(
     """
     ----------------------------------
@@ -303,6 +365,4 @@ if __name__ == '__main__':
     |                                |
     ----------------------------------
     """)
-    tello.land()
-
 #endregion main
