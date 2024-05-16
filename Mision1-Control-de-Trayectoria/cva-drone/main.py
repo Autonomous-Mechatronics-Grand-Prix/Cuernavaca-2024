@@ -261,8 +261,9 @@ def line_detector(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     #Suavizado para quitar el ruido
-    gray_blurred = cv2.GaussianBlur(gray, (9, 9), 4)
-
+    #gray_blurred = cv2.GaussianBlur(gray, (9, 9), 4)
+    gray_blurred = gray 
+    
     # Aplicar el detector de bordes Canny para resaltar los bordes
     edges = cv2.Canny(gray_blurred, 50, 150, apertureSize=3)
 
@@ -280,8 +281,8 @@ def line_detector(frame):
             y1 = int(y0 + 1000 * (a))
             x2 = int(x0 - 1000 * (-b))
             y2 = int(y0 - 1000 * (a))
-            cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-    return frame
+            cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    #return frame
 # endregion functions
 
 
@@ -339,7 +340,7 @@ if __name__ == '__main__':
         detected_frame = detect_figures(frame)
 
         # Regresa la imagen de BGR a RGB
-        #detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
+        detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
@@ -348,7 +349,7 @@ if __name__ == '__main__':
         #cv2.imshow("POV camino del dron", line_frame)
         
         # Mostrar el fotograma con canny
-        cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
+        #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
 
     tello.land()
     print(
