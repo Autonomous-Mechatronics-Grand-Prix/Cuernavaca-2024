@@ -1,5 +1,5 @@
 # TERMINADO:
-# Malla de regiones.
+# Malla de sectors.
 # Detecta en el centro:
 #           - cículos
 # Contador para los Circulos detectados en el centro.
@@ -7,6 +7,7 @@
 # Estado de la batería
 
 # PENDIENTES:
+# Seguir la línea
 #           - cuadrados
 #           - triángulos
 #           - pentágonos
@@ -15,12 +16,21 @@
 
 import numpy as np
 from djitellopy import Tello
-import cv2, math
+import cv2, math, time
 
 # region variables
 circlesCount = 0
 lastUbiX = 0
 lastUbiY = 0
+sectors = []
+height, width = 0, 0
+widthDivThree = 0
+heightDivThree = 0
+widthDivThreePtwo = 0
+heightDivThreePtwo = 0
+lastHeight = 0
+lastWidth = 0
+
 
 # Define a dictionary to store the color ranges
 color_ranges = {
@@ -50,6 +60,51 @@ color_ranges = {
 
 
 # region functions
+# Sacar las dimensiones del plano
+def getDimentions(image):
+    
+    global sectors
+    global height
+    global width
+    global lastHeight
+    global lastWidth
+    global widthDivThree 
+    global heightDivThree
+    global widthDivThreePtwo 
+    global heightDivThreePtwo
+    
+    height, width = image.shape[:2]
+    if (lastHeight != height) or (lastWidth != width):
+        lastHeight = height
+        lastWidth = width
+        
+        widthDivThree = width // 3
+        heightDivThree = height // 3
+        widthDivThreePtwo = 2 * widthDivThree
+        heightDivThreePtwo = 2 * heightDivThree
+
+        sectors = [
+            [(0, 0), (widthDivThree, heightDivThree)],                                  # Región 1 (arriba a la izquierda)
+            [(widthDivThree, 0), (widthDivThreePtwo, heightDivThree)],                  # Región 2 (arriba al centro)
+            [(widthDivThreePtwo, 0), (width, heightDivThree)],                          # Región 3 (arriba a la derecha)
+            [(0, heightDivThree), (widthDivThree, heightDivThreePtwo)],                 # Región 4 (centro a la izquierda)
+            [(widthDivThree, heightDivThree), (widthDivThreePtwo, heightDivThreePtwo)], # Región 5 (centro central)
+            [(widthDivThreePtwo, heightDivThree), (width, heightDivThreePtwo)],         # Región 6 (centro a la derecha)
+            [(0, heightDivThreePtwo), (widthDivThree, height)],                         # Región 7 (abajo a la izquierda)
+            [(widthDivThree, heightDivThreePtwo), (widthDivThreePtwo, height)],         # Región 8 (abajo al centro)
+            [(widthDivThreePtwo, heightDivThreePtwo), (width, height)]                  # Región 9 (abajo a la derecha)
+        ]
+        
+        
+def printSectors(image):
+    
+    global sectors
+          
+    for i, (p1, p2) in enumerate(sectors, start=1):
+         cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
+        # Poner texto guía
+        #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+        
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
 
@@ -77,12 +132,6 @@ def color_detection(image, color):
     # Apply the mask to the original image to get only the regions that match the desired color
     color_detected_image = cv2.bitwise_and(image, image, mask=mask)
 
-    # Check if the mask contains any non-zero values
-    '''if cv2.countNonZero(mask) > 0:
-        print(f'{color} color detected')
-    else:
-        print(f'{color} color not detected')'''
-
     return color_detected_image
 
 # Función para detectar círculos en una región de interés (ROI) de la imagen
@@ -91,47 +140,23 @@ def detect_figures(image):
     # Solicitamos las variables globales
     global circlesCount
     global lastUbiX, lastUbiY
-    global actualbattery
+    global sectors
+    global widthDivThree
+    global heightDivThree
+    global widthDivThreePtwo 
+    global heightDivThreePtwo
 
-    figureFree = True
-
-    # Obtener las dimensiones del fotograma
-    height, width = image.shape[:2]
-
-    show_batery(actualbattery, image, height, width)
-
-    widthDivThree = width // 3
-    heightDivThree = height // 3
-    widthDivThreePtwo = 2 * widthDivThree
-    heightDivThreePtwo = 2 * heightDivThree
-
-    regiones = [
-        [(0, 0), (widthDivThree, heightDivThree)],                                  # Región 1 (arriba a la izquierda)
-        [(widthDivThree, 0), (widthDivThreePtwo, heightDivThree)],                  # Región 2 (arriba al centro)
-        [(widthDivThreePtwo, 0), (width, heightDivThree)],                          # Región 3 (arriba a la derecha)
-        [(0, heightDivThree), (widthDivThree, heightDivThreePtwo)],                 # Región 4 (centro a la izquierda)
-        [(widthDivThree, heightDivThree), (widthDivThreePtwo, heightDivThreePtwo)], # Región 5 (centro central)
-        [(widthDivThreePtwo, heightDivThree), (width, heightDivThreePtwo)],         # Región 6 (centro a la derecha)
-        [(0, heightDivThreePtwo), (widthDivThree, height)],                         # Región 7 (abajo a la izquierda)
-        [(widthDivThree, heightDivThreePtwo), (widthDivThreePtwo, height)],         # Región 8 (abajo al centro)
-        [(widthDivThreePtwo, heightDivThreePtwo), (width, height)]                  # Región 9 (abajo a la derecha)
-    ]
+    #figureFree = True
 
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Aplicar suavizado para reducir el ruido
-    gray_blurred = cv2.GaussianBlur(gray, (9, 9), 2)
-    #gray_blurred=gray
+    #gray_blurred = cv2.GaussianBlur(gray, (9, 9), 2)
+    gray_blurred=gray
 
     # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos)
     circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=175, param2=55, minRadius=0, maxRadius=0)
-
-    # Dibujar las regiones en la imagen
-    for i, (p1, p2) in enumerate(regiones, start=1):
-        cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
-        # Poner texto guía
-        #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
     green = color_detection(image, 'green')
     #cv2.imshow("Green color detected", green)
@@ -164,12 +189,12 @@ def detect_figures(image):
                         pass
                     else:
                         # Mostrar la cantidad de círculos detectados +1
-                        figureFree = False
+                        #figureFree = False
                         circlesCount += 1
                         print("circlesCount:", circlesCount)
                         #tello.rotate_clockwise(-90)
                         #tello.move_forward(30)
-                        #tello.land()
+                        tello.land()
 
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
@@ -182,11 +207,12 @@ def detect_figures(image):
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Draw the contours on the image
-    for contour in contours:
+    '''for contour in contours:
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
 
         # Aproximar la forma del contorno a una forma más simple
-        '''approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
+        
+        approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
         sides = len(approx)
@@ -242,8 +268,25 @@ def detect_figures(image):
                     #pass
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
-                    cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)'''
+                    cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+        
+    for contour in contours:
+        # Obtener el centroide de la figura
+        M = cv2.moments(contour)
+        if M["m00"] != 0:
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            # Extraer el área de la figura para la segmentación por color
+            x, y, w, h = cv2.boundingRect(contour)
+            roi = image[y:y+h, x:x+w]
 
+            # Calcular el color dominante en la región de interés (ROI)
+            color_mean = image
+            color = tuple(map(int, color_mean))
+
+            # Mostrar el color dominante junto con la figura
+            cv2.putText(image, f'Color: {color}', (cX, cY + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    '''   
     return image
 
 # Función para aplicar el filtro Canny a un frame
@@ -254,8 +297,6 @@ def aplicar_filtro_canny(frame):
 
 # Detector de líneas
 def line_detector(frame):
-    # Obtener las dimensiones del fotograma
-    #height, width = frame.shape[:2]
 
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -267,11 +308,17 @@ def line_detector(frame):
     # Aplicar el detector de bordes Canny para resaltar los bordes
     edges = cv2.Canny(gray_blurred, 50, 150, apertureSize=3)
 
+    # Encontrar contornos en la imagen umbralizada
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     # Aplicar la transformada de Hough para detectar líneas
     lines = cv2.HoughLines(edges, 1, np.pi / 180, 150)
 
     # Dibujar las líneas detectadas en la imagen original
     if lines is not None:
+        
+        lineas = []
+        
         for rho, theta in lines[:, 0]:
             a = np.cos(theta)
             b = np.sin(theta)
@@ -281,8 +328,36 @@ def line_detector(frame):
             y1 = int(y0 + 1000 * (a))
             x2 = int(x0 - 1000 * (-b))
             y2 = int(y0 - 1000 * (a))
-            cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-    #return frame
+            # Obtener el centroide de la figura
+            for contour in contours:
+                M = cv2.moments(contour)
+                if M["m00"] != 0:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+
+                    # Extraer el área de la figura para la segmentación por color
+                    x, y, w, h = cv2.boundingRect(contour)
+                    roi = frame[y:y+h, x:x+w]
+
+                    # Calcular el color dominante en la región de interés (ROI)
+                    color_mean = np.mean(roi, axis=(0, 1))
+                    color = tuple(map(int, color_mean))
+                    
+                    # Mostrar el color dominante junto con la figura
+                    if color >= (200, 200, 200):
+                        #cv2.putText(image, f'Color: {color}', (cX-100, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                        cv2.putText(frame, '-Line-', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        #tello.move_forward(40)
+                        #tello.send_rc_control(0, 7, 0, 0)   # Avanzar hacia adelante a velocidad 50
+                        #time.sleep(3)                        # Esperar un segundo
+                        
+                        #tello.land()
+                        
+                        # Pregunta el lado al que tiene que ir
+                        #if cX 
+                        
+    return frame
 # endregion functions
 
 
@@ -301,7 +376,7 @@ if __name__ == '__main__':
     """
     +================================+
     |                                |
-    | Despegando...                  |
+    | Iniciando...                   |
     | Nivel actual de carga:""", tello.get_battery(), """%    |
     |                                |
     +================================+
@@ -325,6 +400,7 @@ if __name__ == '__main__':
 
         # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
         key = cv2.waitKey(1)
+        
         # Aterriza
         if key == 27 or key == ord('q'):
             break
@@ -336,7 +412,10 @@ if __name__ == '__main__':
         # Sube más
         elif key == ord('r'):
             tello.move_up(30)
-
+        
+        # Obtener las dimensiones del fotograma
+        getDimentions(frame)
+        
         # Detectar el camino
         line_frame = line_detector(frame)
 
@@ -354,14 +433,22 @@ if __name__ == '__main__':
 
         # Mostrar el fotograma con canny
         #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
+        
+        # Imprimir el estado de la batería
+        #show_batery(actualbattery, frame, height, width)
+        
+        # Imprimir regiones
+        #printSectors(frame)
+        
+        
 
     tello.land()
     print(
     """
     ----------------------------------
     |                                |
-    | Aterrizando...                 |
-    | Nivel final de carga:""", tello.get_battery(), """%     |
+    | Terminando procesos...         |
+    | Nivel final de carga:""", actualbattery, """%     |
     |                                |
     ----------------------------------
     """)
