@@ -4,14 +4,56 @@ import base64
 import websockets
 import asyncio
 import threading
-from flask import Flask
+from flask import Flask, jsonify
+from flask_cors import CORS
 import requests
-from testapi import app
+from modularized_api import app
 import time
 
 app = Flask(__name__)
+CORS(app)
 
 squares_count = 2
+pentagons_count = 3
+rombos_count = 1
+triangles_count = 0
+circles_count = 1
+
+@app.route('/squares', methods=['GET'])
+def squares():
+    return jsonify({"message": squares_count})
+
+@app.route('/add_square', methods=['POST'])
+def add_square():
+    global squares_count
+    squares_count += 1
+    return jsonify({"message": "Square added"})
+
+@app.route('/pentagons', methods=['GET'])
+def pentagons():
+    return jsonify({"message": pentagons_count})
+
+@app.route('/rombos', methods=['GET'])
+def rombos():
+    return jsonify({"message": rombos_count})
+
+@app.route('/triangles', methods=['GET'])
+def triangles():
+    return jsonify({"message": triangles_count})
+
+@app.route('/circles', methods=['GET'])
+def hello_world():
+    return jsonify({"message": circles_count})
+
+@app.route('/takeoff', methods=['POST'])
+def takeoff():
+    tello.takeoff()
+    return jsonify({"message": "Taking off"})
+
+@app.route('/land', methods=['POST'])
+def land():
+    tello.land()
+    return jsonify({"message": "Landing"})
 
 # Inicializar y conectar el dron
 tello = Tello()
@@ -47,7 +89,7 @@ async def start_websocket_server():
         await asyncio.Future()  # Run forever
 
 def start_flask_app():
-    app.run(debug=True, use_reloader=False, port=5004)
+    app.run(debug=True, use_reloader=False, port=5001)
 
 # Ejecutar la función principal
 if __name__ == "__main__":
