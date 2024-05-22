@@ -19,9 +19,62 @@ from djitellopy import Tello
 import cv2, math
 import websockets
 import base64
+import asyncio
+import threading
+from flask import Flask, jsonify
+from flask_cors import CORS
+import requests
+from modularized_api import app
+import time
+
+app = Flask(__name__)
+CORS(app)
+
+# region api
+@app.route('/squares', methods=['GET'])
+def squares():
+    return jsonify({"message": squares_count})
+
+@app.route('/add_square', methods=['POST'])
+def add_square():
+    global squares_count
+    squares_count += 1
+    return jsonify({"message": "Square added"})
+
+@app.route('/pentagons', methods=['GET'])
+def pentagons():
+    return jsonify({"message": pentagons_count})
+
+@app.route('/rombos', methods=['GET'])
+def rombos():
+    return jsonify({"message": rombos_count})
+
+@app.route('/triangles', methods=['GET'])
+def triangles():
+    return jsonify({"message": triangles_count})
+
+@app.route('/circles', methods=['GET'])
+def hello_world():
+    return jsonify({"message": circles_count})
+
+@app.route('/takeoff', methods=['POST'])
+def takeoff():
+    tello.takeoff()
+    return jsonify({"message": "Taking off"})
+
+@app.route('/land', methods=['POST'])
+def land():
+    tello.land()
+    return jsonify({"message": "Landing"})
+# endregion api
 
 # region variables
-circlesCount = 0
+squares_count = 2
+pentagons_count = 3
+rombos_count = 1
+triangles_count = 0
+circles_count = 1
+
 lastUbiX = 0
 lastUbiY = 0
 
@@ -50,8 +103,6 @@ color_ranges = {
   }
 }
 # endregion variables
-
-
 
 # region functions
 # function to show the battery level in the camera
@@ -95,7 +146,7 @@ def color_detection(image, color):
 def detect_figures(image):
 
     # Solicitamos las variables globales
-    global circlesCount, lastUbiX, lastUbiY, actualbattery
+    global circles_count, lastUbiX, lastUbiY, actualbattery
 
     figureFree = True
 
@@ -169,8 +220,8 @@ def detect_figures(image):
                     else:
                         # Mostrar la cantidad de círculos detectados +1
                         figureFree = False
-                        circlesCount += 1
-                        print("circlesCount:", circlesCount)
+                        circles_count += 1
+                        print("circles_count:", circles_count)
                         #tello.rotate_clockwise(-90)
                         #tello.move_forward(30)
                         #tello.land()
@@ -287,11 +338,33 @@ def line_detector(frame):
             y2 = int(y0 - 1000 * (a))
             cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
     #return frame
+
+def convert_frame(frame):
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+    return frame_base64
+
+async def video_stream(websocket, path):
+    try:
+        while True:
+            frame_base64 = convert_frame()
+            await websocket.send(frame_base64)
+            await asyncio.sleep(0.033)  # ~30 fps
+    except websockets.exceptions.ConnectionClosedOK as e:
+        print(f"Connection closed: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+# start websocket server
+async def start_websocket_server():
+    async with websockets.serve(video_stream, "localhost", 8765):
+        await asyncio.Future() # run forever
+
+def start_flask_app():
+    app.run(debug=True, use_reloader=False, port=5001)
 # endregion functions
 
-
 # region main
-
 if __name__ == '__main__':
     # Inicializamos el objeto Tello
     tello = Tello()
@@ -342,6 +415,8 @@ if __name__ == '__main__':
 
         # Regresa la imagen de BGR a RGB
         detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
+
+        convert_frame(detected_frame)
 
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
