@@ -15,6 +15,7 @@ function App() {
   const [rombos, setRombos] = useState(0);
   const [triangles, setTriangles] = useState(0);
   const [circles, setCircles] = useState(0);
+  const [hello, setHello] = useState(0)
 
   /* const [figures, setFigures] = useState({
     squares: 0,
@@ -23,6 +24,28 @@ function App() {
     triangles: 0,
     circles: 0,
   }); */
+
+  useEffect(() => {
+    const fetchHello = async () => {
+      try {
+        const response = await fetch('http://localhost:5003/squares');
+        const data = await response.json();
+        setHello(data.message)
+        console.log(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchHello();
+
+    const interval = setInterval(() => {
+      fetchHello();
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchSquares = async () => {
@@ -200,6 +223,8 @@ function App() {
             <div className={app.controlsContainer}>
               <button className={app.button} onClick={takeOff}>Take off</button>
               <button className={app.button} onClick={land}>Land</button>
+              <span>{hello}</span>
+              <span>squares: {squares}</span>
             </div>
           </div>
           <div className={app.statics}>
