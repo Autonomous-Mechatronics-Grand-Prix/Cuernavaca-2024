@@ -52,6 +52,7 @@ color_ranges = {
 # endregion variables
 
 
+
 # region functions
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
@@ -66,7 +67,9 @@ def show_batery(actualbattery, image, height, width):
 # function to detect the color of the figures
 def color_detection(image, color):
 
+
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
 
     # Convert the image from BGR to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -82,8 +85,10 @@ def color_detection(image, color):
 
     # Check if the mask contains any non-zero values
     '''if cv2.countNonZero(mask) > 0:
+    '''if cv2.countNonZero(mask) > 0:
         print(f'{color} color detected')
     else:
+        print(f'{color} color not detected')'''
         print(f'{color} color not detected')'''
 
     return color_detected_image
@@ -286,36 +291,72 @@ def line_detector(frame):
     #return frame
 # endregion functions
 
-""" async def video_stream(websocket, path):
-    global frame_read
+
+# region main
+
+if __name__ == '__main__':
+    # Inicializamos el objeto Tello
+    tello = Tello()
+
+    # Conectamos con el Tello
+    tello.connect()
+
+    actualbattery = tello.get_battery()
+
+    # Imprimimos la batería (tiene que ser mayor al 20%)
+    print(
+    """
+    +================================+
+    |                                |
+    | Despegando...                  |
+    | Nivel actual de carga:""", tello.get_battery(), """%    |
+    |                                |
+    +================================+
+    """)
+
+    # Iniciamos el streaming de video
+    tello.streamon()
+
+    # Obtenemos el frame del video
+    frame_read = tello.get_frame_read()
+
     while True:
         frame = frame_read.frame
-        _, buffer = cv2.imencode('.jpg', frame)
-        frame = base64.b64encode(buffer)
-        await websocket.send(frame) """
 
-tello = Tello()
-tello.connect()
-actualbattery = tello.get_battery()
-tello.streamon()
-frame_read = tello.get_frame_read()
+        # Convert the image from BGR to HSV (Hue, Saturation, Value)
+        hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
-async def video_stream(websocket, path):
+        # Tamaño de nuestra ventana
+        resize = cv2.resize(frame, (250, 150))
 
-    while True:
-        frame = frame_read.frame
+        # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
+        key = cv2.waitKey(1)
+        if key == 27 or key == ord('q'):
+            # Aterriza
+
+            break
+        elif key == ord('p'):
+            # Despega
+            tello.takeoff()
+
+        # Detectar círculos en el área central de la imagen
         detected_frame = detect_figures(frame)
 
-        # Encode the frame as JPEG
-        _, buffer = cv2.imencode('.jpg', detected_frame)
-        frame_bytes = buffer.tobytes()
-        frame_base64 = base64.b64encode(frame_bytes).decode('utf-8')
+        # Regresa la imagen de BGR a RGB
+        detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
-        # Send the frame to the WebSocket client
-        await websocket.send(frame_base64)
-        await asyncio.sleep(0.1)
+        # Mostrar el fotograma con círculos detectados
+        cv2.imshow("POV eres el dron", detected_frame)
 
-start_server = websockets.serve(video_stream, "0.0.0.0", 8765)
+    print(
+    """
+    ----------------------------------
+    |                                |
+    | Aterrizando...                 |
+    | Nivel final de carga:""", tello.get_battery(), """%     |
+    |                                |
+    ----------------------------------
+    """)
+    tello.land()
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+#endregion main
