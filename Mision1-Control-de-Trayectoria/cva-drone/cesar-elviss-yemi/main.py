@@ -85,10 +85,8 @@ def color_detection(image, color):
 
     # Check if the mask contains any non-zero values
     '''if cv2.countNonZero(mask) > 0:
-    '''if cv2.countNonZero(mask) > 0:
         print(f'{color} color detected')
     else:
-        print(f'{color} color not detected')'''
         print(f'{color} color not detected')'''
 
     return color_detected_image
