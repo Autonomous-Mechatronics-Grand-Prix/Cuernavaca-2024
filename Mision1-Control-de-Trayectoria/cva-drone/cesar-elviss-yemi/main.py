@@ -378,26 +378,6 @@ def start_flask_app():
     app.run(debug=True, use_reloader=False, port=5001)
 # endregion functions
 
-async def main():
-    try:
-        flask_thread = threading.Thread(target=start_flask_app)
-        flask_thread.start()
-
-        """ time.sleep(2)
-            response = requests.get("http://localhost:5003/squares", params={"squares_count": squares_count})
-            print(response.json())
-
-            response2 = requests.post("http://localhost:5003/add_square")
-            print(response2.json()) """
-
-        asyncio.run(start_websocket_server())
-    except KeyboardInterrupt:
-        print("Server stopped by user")
-    finally:
-        tello.streamoff()
-        tello.end()
-        cv2.destroyAllWindows()
-
 # region main
 if __name__ == '__main__':
 
