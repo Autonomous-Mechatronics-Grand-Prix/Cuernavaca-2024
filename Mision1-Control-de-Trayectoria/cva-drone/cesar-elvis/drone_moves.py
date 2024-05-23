@@ -34,6 +34,9 @@ while True:
     # Tamaño de nuestra ventana
     resize = cv2.resize(img, (500, 300))
     
+    # Regresa la imagen de BGR a RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
     # Mostramos la imagen en una ventana
     cv2.imshow("drone", img)
     

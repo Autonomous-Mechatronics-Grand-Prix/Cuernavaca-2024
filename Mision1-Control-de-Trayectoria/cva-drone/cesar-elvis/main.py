@@ -19,17 +19,18 @@ from djitellopy import Tello
 import cv2, math, time
 
 # region variables
-circlesCount = 0
-lastUbiX = 0
-lastUbiY = 0
-sectors = []
-height, width = 0, 0
+circlesCount = 0        # Cuenta de los círculos
+lastUbiX = 0            # Última ubicación del círculo en x
+lastUbiY = 0            # Última ubicación del círculo en y
+sectors = []            # Arreglo que contiene las segmentaciones de la imagen en una lista de lista con el valor inicial y el final (x, y)
+height, width = 0, 0    # Alto y ancho de la imagen
 widthDivThree = 0
 heightDivThree = 0
 widthDivThreePtwo = 0
 heightDivThreePtwo = 0
-lastHeight = 0
-lastWidth = 0
+lastHeight = 0          # Último ancho de la imagen que se capturó (por si no cargó bien)
+lastWidth = 0           # Última altura de la imagen que se capturó (por si no cargó bien)
+dronInMove = False      # Para saber si el dron está en el aire
 
 
 # Define a dictionary to store the color ranges
@@ -145,6 +146,7 @@ def detect_figures(image):
     global heightDivThree
     global widthDivThreePtwo 
     global heightDivThreePtwo
+    global dronInMove
 
     #figureFree = True
 
@@ -192,9 +194,12 @@ def detect_figures(image):
                         #figureFree = False
                         circlesCount += 1
                         print("circlesCount:", circlesCount)
-                        #tello.rotate_clockwise(-90)
-                        #tello.move_forward(30)
-                        tello.land()
+                        if dronInMove:
+                            #tello.rotate_clockwise(-90)
+                            #tello.move_forward(30)
+                            tello.land()
+                        else:
+                            print("land()")
 
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
@@ -280,7 +285,9 @@ def aplicar_filtro_canny(frame):
 
 # Detector de líneas
 def line_detector(frame):
-
+    
+    global dronInMove
+    
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #gray = frame
@@ -300,8 +307,6 @@ def line_detector(frame):
 
     # Dibujar las líneas detectadas en la imagen original
     if lines is not None:
-        
-        lineas = []
         
         for rho, theta in lines[:, 0]:
             a = np.cos(theta)
@@ -330,24 +335,39 @@ def line_detector(frame):
                     #cv2.putText(frame, f'Color: {color}', (cX-100, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                     
                     # Mostrar el color dominante junto con la figura   110, 150, 160
-                    if color >= (110, 150, 160):
+                    if color >= (110, 110, 110):
                         # cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                         cv2.putText(frame, '-Line-', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                         if cX >= sectors[4][0][0] and cX <= sectors[4][1][0] and cY >= sectors[4][0][1] and cY <= sectors[4][1][1]:
-                            tello.move_forward(80)
-                            #tello.land()
+                            if dronInMove:
+                                tello.move_forward(40)
+                                #tello.land()
+                            else:
+                                print("move_forward(40)")
                         elif cX >= sectors[3][0][0] and cX <= sectors[3][1][0] and cY >= sectors[3][0][1] and cY <= sectors[3][1][1]:
-                            tello.move_left(30)
-                            #tello.land()
+                            if dronInMove:
+                                tello.move_left(20)
+                                #tello.land()
+                            else:
+                                print("move_left(20)")
                         elif cX >= sectors[5][0][0] and cX <= sectors[5][1][0] and cY >= sectors[5][0][1] and cY <= sectors[5][1][1]:
-                            tello.move_right(30)
+                            if dronInMove:
+                                tello.move_right(20)
+                            else:
+                                print("move_right(20)")
                         elif cX >= sectors[0][0][0] and cX <= sectors[0][1][0] and cY >= sectors[0][0][1] and cY <= sectors[0][1][1]:
-                            tello.rotate_clockwise(-20)
-                            tello.move_forward(40)
+                            if dronInMove:
+                                tello.rotate_clockwise(-20)
+                                tello.move_forward(40)
+                            else:
+                                print("rotate_clockwise(-20) + move_forward(40)")
                         elif cX >= sectors[2][0][0] and cX <= sectors[2][1][0] and cY >= sectors[2][0][1] and cY <= sectors[2][1][1]:
-                            tello.rotate_clockwise(20)
-                            tello.move_forward(40)
-                            #tello.land()
+                            if dronInMove:
+                                tello.rotate_clockwise(20)
+                                tello.move_forward(40)
+                                #tello.land()
+                            else:
+                                print("rotate_clockwise(20) + move_forward(40)")
                     ''' Detección de colores
                     elif color >= (170, 60, 0) and color <= (240, 62, 17):
                         cv2.putText(frame, 'Naranja', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
@@ -414,6 +434,8 @@ if __name__ == '__main__':
         # Despega
         elif key == ord('p'):
             tello.takeoff()
+            tello.move_up(50)
+            dronInMove = True
         
         # Sube más
         elif key == ord('r'):
@@ -448,10 +470,7 @@ if __name__ == '__main__':
 
         # Mostrar el fotograma con canny
         #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
-        
-        
-        
-
+    
     tello.land()
     print(
     """
