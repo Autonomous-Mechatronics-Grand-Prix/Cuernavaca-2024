@@ -3,6 +3,9 @@ header.header {
   height: 10%;
   text-align: center;
   border-bottom: 1px solid #eaeaea;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 header.header h1.h1 {

@@ -13,12 +13,78 @@
 # Detectar colores
 # Interfaz web
 
+import asyncio
 import numpy as np
 from djitellopy import Tello
 import cv2, math
+import websockets
+import base64
+import asyncio
+import threading
+from flask import Flask, jsonify
+from flask_cors import CORS
+import requests
+from modularized_api import app
+import time
+
+app = Flask(__name__)
+CORS(app)
+
+# region api
+@app.route('/squares', methods=['GET'])
+def squares():
+    return jsonify({"message": squares_count})
+
+@app.route('/add_square', methods=['POST'])
+def add_square():
+    global squares_count
+    squares_count += 1
+    return jsonify({"message": "Square added"})
+
+@app.route('/pentagons', methods=['GET'])
+def pentagons():
+    return jsonify({"message": pentagons_count})
+
+@app.route('/rombos', methods=['GET'])
+def rombos():
+    return jsonify({"message": rombos_count})
+
+@app.route('/triangles', methods=['GET'])
+def triangles():
+    return jsonify({"message": triangles_count})
+
+@app.route('/circles', methods=['GET'])
+def hello_world():
+    return jsonify({"message": circles_count})
+
+@app.route('/takeoff', methods=['POST'])
+def takeoff():
+    tello.takeoff()
+    return jsonify({"message": "Taking off"})
+
+@app.route('/land', methods=['POST'])
+def land():
+    tello.land()
+    return jsonify({"message": "Landing"})
+# endregion api
 
 # region variables
-circlesCount = 0
+squares_count = 2
+pentagons_count = 3
+rombos_count = 1
+triangles_count = 0
+circles_count = 1
+
+# Inicializamos el objeto Tello
+tello = Tello()
+# Conectamos con el Tello
+tello.connect()
+actualbattery = tello.get_battery()
+# Iniciamos el streaming de video
+tello.streamon()
+# Obtenemos el frame del video
+frame_read = tello.get_frame_read()
+
 lastUbiX = 0
 lastUbiY = 0
 
@@ -48,7 +114,6 @@ color_ranges = {
 }
 # endregion variables
 
-
 # region functions
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
@@ -63,7 +128,9 @@ def show_batery(actualbattery, image, height, width):
 # function to detect the color of the figures
 def color_detection(image, color):
 
+
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
 
     # Convert the image from BGR to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -89,9 +156,7 @@ def color_detection(image, color):
 def detect_figures(image):
 
     # Solicitamos las variables globales
-    global circlesCount
-    global lastUbiX, lastUbiY
-    global actualbattery
+    global circles_count, lastUbiX, lastUbiY, actualbattery
 
     figureFree = True
 
@@ -165,8 +230,8 @@ def detect_figures(image):
                     else:
                         # Mostrar la cantidad de círculos detectados +1
                         figureFree = False
-                        circlesCount += 1
-                        print("circlesCount:", circlesCount)
+                        circles_count += 1
+                        print("circles_count:", circles_count)
                         #tello.rotate_clockwise(-90)
                         #tello.move_forward(30)
                         #tello.land()
@@ -283,18 +348,38 @@ def line_detector(frame):
             y2 = int(y0 - 1000 * (a))
             cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
     #return frame
-# endregion functions
 
+def convert_frame(frame):
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+    return frame_base64
+
+async def video_stream(websocket, path):
+    try:
+        while True:
+            frame = frame_read.frame
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Detectar figuras en el fotograma y actualizar frame_read
+            detected_frame = detect_figures(rgb_frame)
+            frame_base64 = convert_frame(detected_frame)
+            await websocket.send(frame_base64)
+            await asyncio.sleep(0.033)  # ~30 fps
+    except websockets.exceptions.ConnectionClosedOK as e:
+        print(f"Connection closed: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+# start websocket server
+async def start_websocket_server():
+    async with websockets.serve(video_stream, "localhost", 8765):
+        await asyncio.Future() # run forever
+
+def start_flask_app():
+    app.run(debug=True, use_reloader=False, port=5001)
+# endregion functions
 
 # region main
 if __name__ == '__main__':
-    # Inicializamos el objeto Tello
-    tello = Tello()
-
-    # Conectamos con el Tello
-    tello.connect()
-
-    actualbattery = tello.get_battery()
 
     # Imprimimos la batería (tiene que ser mayor al 20%)
     print(
@@ -302,19 +387,17 @@ if __name__ == '__main__':
     +================================+
     |                                |
     | Despegando...                  |
-    | Nivel actual de carga:""", tello.get_battery(), """%    |
+    | Nivel actual de carga:""", actualbattery, """%    |
     |                                |
     +================================+
     """)
 
-    # Iniciamos el streaming de video
-    tello.streamon()
-
-    # Obtenemos el frame del video
-    frame_read = tello.get_frame_read()
+    # Inicia el bucle de eventos asyncio para ejecutar ambos servidores
+    flask_thread = threading.Thread(target=start_flask_app)
+    flask_thread.start()
+    asyncio.run(start_websocket_server())
 
     while True:
-        # Asignar y leer el fotograma actual de la cámara
         frame = frame_read.frame
 
         # Convert the image from BGR to HSV (Hue, Saturation, Value)
@@ -325,20 +408,13 @@ if __name__ == '__main__':
 
         # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
         key = cv2.waitKey(1)
-        # Aterriza
         if key == 27 or key == ord('q'):
-            break
-        
-        # Despega
-        elif key == ord('p'):
-            tello.takeoff()
-        
-        # Sube más
-        elif key == ord('r'):
-            tello.move_up(30)
+            # Aterriza
 
-        # Detectar el camino
-        line_frame = line_detector(frame)
+            break
+        elif key == ord('p'):
+            # Despega
+            tello.takeoff()
 
         # Detectar círculos en el área central de la imagen
         detected_frame = detect_figures(frame)
@@ -346,23 +422,22 @@ if __name__ == '__main__':
         # Regresa la imagen de BGR a RGB
         detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
-        # Mostrar el fotograma con círculos detectados
-        cv2.imshow("POV eres el dron", detected_frame)
+        frame_read = detected_frame
 
-        # Mostrar el camino
-        #cv2.imshow("POV camino del dron", line_frame)
+        """ asyncio.run(start_websocket_server()) """
 
-        # Mostrar el fotograma con canny
-        #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
+        """ convert_frame(detected_frame) """
+        cv2.imshow("detected_frame: ", detected_frame)
 
-    tello.land()
     print(
     """
     ----------------------------------
     |                                |
     | Aterrizando...                 |
-    | Nivel final de carga:""", tello.get_battery(), """%     |
+    | Nivel final de carga:""", actualbattery, """%     |
     |                                |
     ----------------------------------
     """)
+    tello.land()
+
 #endregion main
