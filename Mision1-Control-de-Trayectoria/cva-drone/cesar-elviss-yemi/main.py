@@ -358,9 +358,9 @@ async def video_stream(websocket, path):
     try:
         while True:
             frame = frame_read.frame
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             # Detectar figuras en el fotograma y actualizar frame_read
-            detected_frame = detect_figures(frame)
-            frame_read.frame = detected_frame
+            detected_frame = detect_figures(rgb_frame)
             frame_base64 = convert_frame(detected_frame)
             await websocket.send(frame_base64)
             await asyncio.sleep(0.033)  # ~30 fps
