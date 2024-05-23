@@ -14,6 +14,7 @@
 # Detectar colores
 # Interfaz web
 
+import asyncio
 import numpy as np
 from djitellopy import Tello
 import cv2, math, time
@@ -58,7 +59,6 @@ color_ranges = {
   }
 }
 # endregion variables
-
 
 # region functions
 # Sacar las dimensiones del plano
@@ -119,7 +119,9 @@ def show_batery(actualbattery, image, height, width):
 # function to detect the color of the figures
 def color_detection(image, color):
 
+
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
 
     # Convert the image from BGR to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -386,16 +388,37 @@ def line_detector(frame):
     return frame
 # endregion functions
 
+def convert_frame(frame):
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+    return frame_base64
+
+async def video_stream(websocket, path):
+    try:
+        while True:
+            frame = frame_read.frame
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Detectar figuras en el fotograma y actualizar frame_read
+            detected_frame = detect_figures(rgb_frame)
+            frame_base64 = convert_frame(detected_frame)
+            await websocket.send(frame_base64)
+            await asyncio.sleep(0.033)  # ~30 fps
+    except websockets.exceptions.ConnectionClosedOK as e:
+        print(f"Connection closed: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+# start websocket server
+async def start_websocket_server():
+    async with websockets.serve(video_stream, "localhost", 8765):
+        await asyncio.Future() # run forever
+
+def start_flask_app():
+    app.run(debug=True, use_reloader=False, port=5001)
+# endregion functions
 
 # region main
 if __name__ == '__main__':
-    # Inicializamos el objeto Tello
-    tello = Tello()
-
-    # Conectamos con el Tello
-    tello.connect()
-
-    actualbattery = tello.get_battery()
 
     # Imprimimos la batería (tiene que ser mayor al 20%)
     print(
@@ -408,14 +431,12 @@ if __name__ == '__main__':
     +================================+
     """)
 
-    # Iniciamos el streaming de video
-    tello.streamon()
-
-    # Obtenemos el frame del video
-    frame_read = tello.get_frame_read()
+    # Inicia el bucle de eventos asyncio para ejecutar ambos servidores
+    flask_thread = threading.Thread(target=start_flask_app)
+    flask_thread.start()
+    asyncio.run(start_websocket_server())
 
     while True:
-        # Asignar y leer el fotograma actual de la cámara
         frame = frame_read.frame
 
         # Convert the image from BGR to HSV (Hue, Saturation, Value)
@@ -465,8 +486,7 @@ if __name__ == '__main__':
         # Mostrar el fotograma con círculos detectados
         cv2.imshow("POV eres el dron", detected_frame)
 
-        # Mostrar el camino
-        #cv2.imshow("POV camino del dron", line_frame)
+        """ asyncio.run(start_websocket_server()) """
 
         # Mostrar el fotograma con canny
         #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
