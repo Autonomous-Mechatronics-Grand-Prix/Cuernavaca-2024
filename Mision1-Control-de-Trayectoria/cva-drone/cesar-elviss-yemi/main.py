@@ -75,6 +75,16 @@ rombos_count = 1
 triangles_count = 0
 circles_count = 1
 
+# Inicializamos el objeto Tello
+tello = Tello()
+# Conectamos con el Tello
+tello.connect()
+actualbattery = tello.get_battery()
+# Iniciamos el streaming de video
+tello.streamon()
+# Obtenemos el frame del video
+frame_read = tello.get_frame_read()
+
 lastUbiX = 0
 lastUbiY = 0
 
@@ -347,7 +357,11 @@ def convert_frame(frame):
 async def video_stream(websocket, path):
     try:
         while True:
-            frame_base64 = convert_frame()
+            frame = frame_read.frame
+            # Detectar figuras en el fotograma y actualizar frame_read
+            detected_frame = detect_figures(frame)
+            frame_read.frame = detected_frame
+            frame_base64 = convert_frame(detected_frame)
             await websocket.send(frame_base64)
             await asyncio.sleep(0.033)  # ~30 fps
     except websockets.exceptions.ConnectionClosedOK as e:
@@ -364,15 +378,28 @@ def start_flask_app():
     app.run(debug=True, use_reloader=False, port=5001)
 # endregion functions
 
+async def main():
+    try:
+        flask_thread = threading.Thread(target=start_flask_app)
+        flask_thread.start()
+
+        """ time.sleep(2)
+            response = requests.get("http://localhost:5003/squares", params={"squares_count": squares_count})
+            print(response.json())
+
+            response2 = requests.post("http://localhost:5003/add_square")
+            print(response2.json()) """
+
+        asyncio.run(start_websocket_server())
+    except KeyboardInterrupt:
+        print("Server stopped by user")
+    finally:
+        tello.streamoff()
+        tello.end()
+        cv2.destroyAllWindows()
+
 # region main
 if __name__ == '__main__':
-    # Inicializamos el objeto Tello
-    tello = Tello()
-
-    # Conectamos con el Tello
-    tello.connect()
-
-    actualbattery = tello.get_battery()
 
     # Imprimimos la batería (tiene que ser mayor al 20%)
     print(
@@ -380,16 +407,15 @@ if __name__ == '__main__':
     +================================+
     |                                |
     | Despegando...                  |
-    | Nivel actual de carga:""", tello.get_battery(), """%    |
+    | Nivel actual de carga:""", actualbattery, """%    |
     |                                |
     +================================+
     """)
 
-    # Iniciamos el streaming de video
-    tello.streamon()
-
-    # Obtenemos el frame del video
-    frame_read = tello.get_frame_read()
+    # Inicia el bucle de eventos asyncio para ejecutar ambos servidores
+    flask_thread = threading.Thread(target=start_flask_app)
+    flask_thread.start()
+    asyncio.run(start_websocket_server())
 
     while True:
         frame = frame_read.frame
@@ -416,17 +442,19 @@ if __name__ == '__main__':
         # Regresa la imagen de BGR a RGB
         detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
-        convert_frame(detected_frame)
+        frame_read = detected_frame
 
-        # Mostrar el fotograma con círculos detectados
-        cv2.imshow("POV eres el dron", detected_frame)
+        """ asyncio.run(start_websocket_server()) """
+
+        """ convert_frame(detected_frame) """
+        cv2.imshow("detected_frame: ", detected_frame)
 
     print(
     """
     ----------------------------------
     |                                |
     | Aterrizando...                 |
-    | Nivel final de carga:""", tello.get_battery(), """%     |
+    | Nivel final de carga:""", actualbattery, """%     |
     |                                |
     ----------------------------------
     """)
