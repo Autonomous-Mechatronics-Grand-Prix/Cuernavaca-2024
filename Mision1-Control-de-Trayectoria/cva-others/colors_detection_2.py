@@ -2,13 +2,18 @@ import cv2
 import numpy as np
 
 # Cargar la imagen utilizando OpenCV
-image = cv2.imread('ima.jpg')
+image = cv2.imread('W2.jpeg')
 
+# Tamaño de nuestra ventana
+image = cv2.resize(image, (500, 500))
+        
 # Convertir la imagen a escala de grises
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#gray= image
 
 # Aplicar umbralizado para detectar bordes
-bordes = cv2.Canny(image, 100, 900)
+#bordes = cv2.Canny(image, 100, 900)
+bordes = cv2.Canny(image, 49, 50)
 
 # Encontrar contornos en la imagen umbralizada
 contours, _ = cv2.findContours(bordes, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -54,7 +59,8 @@ for contour in contours:
     cv2.putText(image, shape, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
     # Mostrar el color dominante junto con la figura
-    cv2.putText(image, f'Color: {color}', (cX, cY + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    #cv2.putText(image, f'Color: {color}', (cX, cY + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    cv2.putText(image, f'Color: {color}', (x+w, y+h), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
 # Mostrar la imagen con las figuras identificadas y sus colores
 cv2.imshow('Formas y Colores Detectados', image)
