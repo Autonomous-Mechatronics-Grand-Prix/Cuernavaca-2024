@@ -123,22 +123,22 @@ color_ranges = {
 # region functions
 # Sacar las dimensiones del plano
 def getDimentions(image):
-    
+
     global sectors
     global height
     global width
     global lastHeight
     global lastWidth
-    global widthDivThree 
+    global widthDivThree
     global heightDivThree
-    global widthDivThreePtwo 
+    global widthDivThreePtwo
     global heightDivThreePtwo
-    
+
     height, width = image.shape[:2]
     if (lastHeight != height) or (lastWidth != width):
         lastHeight = height
         lastWidth = width
-        
+
         widthDivThree = width // 3
         heightDivThree = height // 3
         widthDivThreePtwo = 2 * widthDivThree
@@ -155,17 +155,17 @@ def getDimentions(image):
             [(widthDivThree, heightDivThreePtwo), (widthDivThreePtwo, height)],         # Región 8 (abajo al centro)
             [(widthDivThreePtwo, heightDivThreePtwo), (width, height)]                  # Región 9 (abajo a la derecha)
         ]
-        
-        
+
+
 def printSectors(image):
-    
+
     global sectors
-          
+
     for i, (p1, p2) in enumerate(sectors, start=1):
          cv2.rectangle(image, p1, p2, (255, 255, 255), 2)
         # Poner texto guía
         #cv2.putText(image, f"Cuadrante {i}", (p1[0], p1[1]+50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-        
+
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
 
@@ -178,10 +178,7 @@ def show_batery(actualbattery, image, height, width):
 
 # function to detect the color of the figures
 def color_detection(image, color):
-
-
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
 
     # Convert the image from BGR to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -201,12 +198,12 @@ def color_detection(image, color):
 def detect_figures(image):
 
     # Solicitamos las variables globales
-    global circlesCount
+    global circles_count
     global lastUbiX, lastUbiY
     global sectors
     global widthDivThree
     global heightDivThree
-    global widthDivThreePtwo 
+    global widthDivThreePtwo
     global heightDivThreePtwo
     global dronInMove
 
@@ -254,8 +251,8 @@ def detect_figures(image):
                     else:
                         # Mostrar la cantidad de círculos detectados +1
                         #figureFree = False
-                        circlesCount += 1
-                        print("circlesCount:", circlesCount)
+                        circles_count += 1
+                        print("circles_count:", circles_count)
                         if dronInMove:
                             #tello.rotate_clockwise(-90)
                             #tello.move_forward(30)
@@ -278,7 +275,7 @@ def detect_figures(image):
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
 
         # Aproximar la forma del contorno a una forma más simple
-        
+
         approx = cv2.approxPolyDP(contour, 0.1 * cv2.arcLength(contour, True), True)
 
         # Determinar el tipo de forma
@@ -336,7 +333,7 @@ def detect_figures(image):
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-    '''   
+    '''
     return image
 
 # Función para aplicar el filtro Canny a un frame
@@ -347,9 +344,9 @@ def aplicar_filtro_canny(frame):
 
 # Detector de líneas
 def line_detector(frame):
-    
+
     global dronInMove
-    
+
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #gray = frame
@@ -369,7 +366,7 @@ def line_detector(frame):
 
     # Dibujar las líneas detectadas en la imagen original
     if lines is not None:
-        
+
         for rho, theta in lines[:, 0]:
             a = np.cos(theta)
             b = np.sin(theta)
@@ -393,9 +390,9 @@ def line_detector(frame):
                     # Calcular el color dominante en la región de interés (ROI)
                     color_mean = np.mean(roi, axis=(0, 1))
                     color = tuple(map(int, color_mean))
-                    
+
                     #cv2.putText(frame, f'Color: {color}', (cX-100, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                    
+
                     # Mostrar el color dominante junto con la figura   110, 150, 160
                     if color >= (110, 110, 110):
                         # cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
@@ -438,13 +435,13 @@ def line_detector(frame):
                         # tello.land()
                         #cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                     elif color >= (105, 0, 0) and color <= (169, 1, 1):
-                        cv2.putText(frame, 'Rojo', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)   
+                        cv2.putText(frame, 'Rojo', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                     elif color >= (211, 180, 0) and color <= (255, 255, 1):
-                        cv2.putText(frame, 'Amarillo', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)   
+                        cv2.putText(frame, 'Amarillo', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                     elif color >= (60, 110, 130):
                         cv2.putText(frame, 'Azul', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                     #     #tello.move_forward(80)
-                    #     #tello.land()'''                 
+                    #     #tello.land()'''
     return frame
 # endregion functions
 
@@ -457,9 +454,15 @@ async def video_stream(websocket, path):
     try:
         while True:
             frame = frame_read.frame
+            # Obtener las dimensiones del fotograma
+            getDimentions(frame)
+            # Detectar el camino
+            line_frame = line_detector(frame)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             # Detectar figuras en el fotograma y actualizar frame_read
             detected_frame = detect_figures(rgb_frame)
+            show_batery(actualbattery, detected_frame, height, width)
+            printSectors(detected_frame)
             frame_base64 = convert_frame(detected_frame)
             await websocket.send(frame_base64)
             await asyncio.sleep(0.033)  # ~30 fps
@@ -496,67 +499,6 @@ if __name__ == '__main__':
     flask_thread.start()
     asyncio.run(start_websocket_server())
 
-    while True:
-        frame = frame_read.frame
-
-        # Convert the image from BGR to HSV (Hue, Saturation, Value)
-        hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-
-        # Tamaño de nuestra ventana
-        resize = cv2.resize(frame, (250, 150))
-
-        # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
-        key = cv2.waitKey(1)
-        
-        # Aterriza
-        if key == 27 or key == ord('q'):
-            break
-        
-        # Despega
-        elif key == ord('p'):
-            tello.takeoff()
-            tello.move_up(50)
-            dronInMove = True
-        
-        # Sube más
-        elif key == ord('r'):
-            tello.move_up(50)
-            
-        elif key == ord('w'):
-            tello.move_forward(30)
-        
-        # Obtener las dimensiones del fotograma
-        getDimentions(frame)
-        
-        # Detectar el camino
-        line_frame = line_detector(frame)
-
-        # Detectar círculos en el área central de la imagen
-        detected_frame = detect_figures(frame)
-
-        # Regresa la imagen de BGR a RGB
-        detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
-
-        # Imprimir el estado de la batería
-        #show_batery(actualbattery, detected_frame, height, width)
-        
-        # Imprimir regiones
-        printSectors(detected_frame)
-        
-        # Mostrar el fotograma con círculos detectados
-        cv2.imshow("POV eres el dron", detected_frame)
-
-        # Mostrar el fotograma con canny
-        #cv2.imshow("POV eres el dron con canny", aplicar_filtro_canny(frame))
-        
-        '''frame_read = detected_frame
-
-        """ asyncio.run(start_websocket_server()) """
-
-        """ convert_frame(detected_frame) """
-        cv2.imshow("detected_frame: ", detected_frame)'''
-
-    
     tello.land()
     print(
     """
