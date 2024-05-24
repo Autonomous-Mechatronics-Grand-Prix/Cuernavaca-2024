@@ -116,7 +116,10 @@ color_ranges = {
   'red': {
     'lower': np.array([165, 50, 50]), # Minimum values of H, S, V for red color
     'upper': np.array([180, 255, 255]) # Maximum values of H, S, V for red color
-  }
+  },'white': {
+    'lower': np.array([0, 0, 250]), # Minimum values of H, S, V for yellow color
+    'upper': np.array([360, 5, 255]) # Maximum values of H, S, V for yellow color
+  },
 }
 # endregion variables
 
@@ -156,7 +159,6 @@ def getDimentions(image):
             [(widthDivThreePtwo, heightDivThreePtwo), (width, height)]                  # Región 9 (abajo a la derecha)
         ]
 
-
 def printSectors(image):
 
     global sectors
@@ -168,7 +170,6 @@ def printSectors(image):
 
 # function to show the battery level in the camera
 def show_batery(actualbattery, image, height, width):
-
     if actualbattery > tello.get_battery():
         actualbattery = tello.get_battery()
     cv2.putText(image, f"Battery: {actualbattery}%", ((width*2//3)+(width//100), height//12), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 0), 2)
@@ -178,16 +179,14 @@ def show_batery(actualbattery, image, height, width):
 
 # function to detect the color of the figures
 def color_detection(image, color):
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
     # Convert the image from BGR to HSV
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     # Access the color range from the dictionary
     color_range = color_ranges[color]
 
     # Create a binary mask where pixels within the color range are white and others are black
-    mask = cv2.inRange(hsv_image, color_range['lower'], color_range['upper'])
+    mask = cv2.inRange(image, color_range['lower'], color_range['upper'])
 
     # Apply the mask to the original image to get only the regions that match the desired color
     color_detected_image = cv2.bitwise_and(image, image, mask=mask)
@@ -219,9 +218,6 @@ def detect_figures(image):
     # Detectar círculos utilizando la transformada de Hough      resolución - dist entre centros - sensibilidad bordes - votos necesarios - tamaño de radios min y max (0 = todos)
     circles = cv2.HoughCircles(gray_blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=500, param1=175, param2=55, minRadius=0, maxRadius=0)
 
-    green = color_detection(image, 'green')
-    #cv2.imshow("Green color detected", green)
-
     if circles is not None:
 
         # Redondear las coordenadas de los círculos detectados
@@ -233,10 +229,13 @@ def detect_figures(image):
             actualUbiX = x_circle
             actualUbiY = y_circle
 
-            # Preguntar si está en el centro la figura
-            if (x_circle >= widthDivThree and x_circle <= widthDivThreePtwo) and (y_circle >= heightDivThree and y_circle <= heightDivThreePtwo):
+            # Convertir la imagen a HSV
+            hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            # Obtener la máscara para el color verde
+            green_mask = cv2.inRange(hsv_image, color_ranges['green']['lower'], color_ranges['green']['upper'])
 
-                if green is not None:
+            # Preguntar si está en el centro la figura
+            if (x_circle >= widthDivThree and x_circle <= widthDivThreePtwo) and (y_circle >= heightDivThree and y_circle <= heightDivThreePtwo) and green_mask[y_circle, x_circle] > 0:
                     # Dibujar el círculo y su centro en el fotograma original
                     cv2.circle(image, (x_circle, y_circle), r, (0, 255, 0), 4)
                     cv2.rectangle(image, (x_circle - 5, y_circle - 5), (x_circle + 5, y_circle + 5), (255, 128, 0), -1)
@@ -271,7 +270,7 @@ def detect_figures(image):
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Draw the contours on the image
-    '''for contour in contours:
+    for contour in contours:
         #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
 
         # Aproximar la forma del contorno a una forma más simple
@@ -288,7 +287,7 @@ def detect_figures(image):
 
         #blue_mask = mask_color(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
         #if sides == 3 and blue_mask is not None:
-
+        '''
         if sides == 3:
             # Calcular si es un triángulo equilátero
             #if h-0.5 <= perimeter/3 <= h+0.5:
@@ -333,7 +332,7 @@ def detect_figures(image):
                     # cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 4)
                     cv2.circle(image, (cX, cY), (x+w)//100, (255, 128, 0), -1)
                     cv2.putText(image, "Pentagon", (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-    '''
+        '''
     return image
 
 # Función para aplicar el filtro Canny a un frame
@@ -394,6 +393,7 @@ def line_detector(frame):
                     #cv2.putText(frame, f'Color: {color}', (cX-100, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
                     # Mostrar el color dominante junto con la figura   110, 150, 160
+                    # Blanco
                     if color >= (110, 110, 110):
                         # cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                         cv2.putText(frame, '-Line-', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
@@ -427,21 +427,66 @@ def line_detector(frame):
                                 #tello.land()
                             else:
                                 print("rotate_clockwise(20) + move_forward(40)")
-                    ''' Detección de colores
-                    elif color >= (170, 60, 0) and color <= (240, 62, 17):
+                    # Detección de colores
+
+
+                    hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+                    red_mask = cv2.inRange(hsv_image, color_ranges['red']['lower'], color_ranges['red']['upper'])
+                    white_mask = cv2.inRange(hsv_image, color_ranges['white']['lower'], color_ranges['white']['upper'])
+                    blue_mask = cv2.inRange(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
+
+                    height, width, _ = frame.shape
+                    center_x = width // 2
+                    center_y = height // 2
+                    sector_width = width // 3
+                    sector_height = height // 3
+                    central_red_sector = red_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+                    central_white_sector = white_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+                    central_blue_sector = blue_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+
+                    # Detectar si hay píxeles azules en el sector central
+                    if cv2.countNonZero(central_red_sector) > 0:
+                        print("Color rojo detectado en el sector central")
+                        # Lógica para el giro a la derecha
+                    if cv2.countNonZero(central_white_sector) > 0:
+                        print("Color blanco detectado en el sector central")
+                    if cv2.countNonZero(central_blue_sector) > 0:
+                        print("Color azul detectado en el sector central")
+
+                    """elif color >= (170, 60, 0) and color <= (240, 62, 17):
                         cv2.putText(frame, 'Naranja', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                        # tello.move_forward(180)
-                        # tello.rotate_clockwise(180)
-                        # tello.land()
-                        #cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                        if dronInMove:
+                            tello.move_forward(180)
+                            tello.rotate_clockwise(180)
+                            #tello.land()
+                        else:
+                            print("naranja detectado")
                     elif color >= (105, 0, 0) and color <= (169, 1, 1):
                         cv2.putText(frame, 'Rojo', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        if dronInMove:
+                            tello.move_forward(180)
+                            tello.rotate_clockwise(180)
+                            #tello.land()
+                        else:
+                            print("rojo detectado")
                     elif color >= (211, 180, 0) and color <= (255, 255, 1):
                         cv2.putText(frame, 'Amarillo', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        if dronInMove:
+                            tello.move_forward(180)
+                            tello.rotate_clockwise(180)
+                            #tello.land()
+                        else:
+                            print("amarillo detectado")
                     elif color >= (60, 110, 130):
                         cv2.putText(frame, 'Azul', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        if dronInMove:
+                            tello.move_forward(180)
+                            tello.rotate_clockwise(180)
+                            #tello.land()
+                        else:
+                            print("azul detectado") """
                     #     #tello.move_forward(80)
-                    #     #tello.land()'''
+                    #     #tello.land()
     return frame
 # endregion functions
 
