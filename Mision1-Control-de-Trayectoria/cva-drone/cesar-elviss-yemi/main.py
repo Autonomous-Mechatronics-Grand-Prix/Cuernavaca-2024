@@ -87,6 +87,9 @@ heightDivThreePtwo = 0
 lastHeight = 0          # Último ancho de la imagen que se capturó (por si no cargó bien)
 lastWidth = 0           # Última altura de la imagen que se capturó (por si no cargó bien)
 dronInMove = False      # Para saber si el dron está en el aire
+# Definir el tiempo mínimo entre detecciones de color azul (en segundos)
+tiempo_minimo_entre_detecciones = 3
+ultimo_tiempo_deteccion = 0
 tello = Tello()         # Inicializamos el objeto Tello
 tello.connect()         # Conectamos con el Tello
 actualbattery = tello.get_battery()     # Obtenemos la bartería del dron
@@ -254,10 +257,9 @@ def detect_figures(image):
                         print("circles_count:", circles_count)
                         if dronInMove:
                             #tello.rotate_clockwise(-90)
-                            #tello.move_forward(30)
-                            tello.land()
+                            tello.move_forward(30)
                         else:
-                            print("land()")
+                            print("move_forward()")
 
             # Actualiza la posición del cículo por si está en otra región
             lastUbiX = actualUbiX
@@ -345,6 +347,8 @@ def aplicar_filtro_canny(frame):
 def line_detector(frame):
 
     global dronInMove
+    global lastUbiX
+    global lastUbiY
 
     # Convertir la imagen a escala de grises
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -394,7 +398,7 @@ def line_detector(frame):
 
                     # Mostrar el color dominante junto con la figura   110, 150, 160
                     # Blanco
-                    if color >= (110, 110, 110):
+                    if color >= (250, 250, 0):
                         # cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
                         cv2.putText(frame, '-Line-', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                         if cX >= sectors[4][0][0] and cX <= sectors[4][1][0] and cY >= sectors[4][0][1] and cY <= sectors[4][1][1]:
@@ -435,23 +439,38 @@ def line_detector(frame):
                     white_mask = cv2.inRange(hsv_image, color_ranges['white']['lower'], color_ranges['white']['upper'])
                     blue_mask = cv2.inRange(hsv_image, color_ranges['blue']['lower'], color_ranges['blue']['upper'])
 
-                    height, width, _ = frame.shape
-                    center_x = width // 2
-                    center_y = height // 2
-                    sector_width = width // 3
-                    sector_height = height // 3
-                    central_red_sector = red_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
-                    central_white_sector = white_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
-                    central_blue_sector = blue_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+                    # Obtener el tiempo actual
+                    tiempo_actual = time.time()
 
-                    # Detectar si hay píxeles azules en el sector central
-                    if cv2.countNonZero(central_red_sector) > 0:
-                        print("Color rojo detectado en el sector central")
-                        # Lógica para el giro a la derecha
-                    if cv2.countNonZero(central_white_sector) > 0:
-                        print("Color blanco detectado en el sector central")
-                    if cv2.countNonZero(central_blue_sector) > 0:
-                        print("Color azul detectado en el sector central")
+                    # Verificar si ha pasado suficiente tiempo desde la última detección de color azul
+                    if tiempo_actual - ultimo_tiempo_deteccion >= tiempo_minimo_entre_detecciones:
+                        # Obtener las dimensiones de la imagen
+                        height, width, _ = frame.shape
+                        center_x = width // 2
+                        center_y = height // 2
+                        sector_width = width // 3
+                        sector_height = height // 3
+                        central_red_sector = red_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+                        central_white_sector = white_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+                        central_blue_sector = blue_mask[center_y-sector_height//2:center_y+sector_height//2, center_x-sector_width//2:center_x+sector_width//2]
+
+                        # Detectar si hay píxeles azules en el sector central
+                        if cv2.countNonZero(central_red_sector) > 0:
+                            print("Color rojo detectado en el sector central")
+                            tello.rotate_clockwise(90)
+                            tello.move_forward(30)
+                            ultimo_tiempo_deteccion = tiempo_actual
+                            # Lógica para el giro a la derecha
+                        if cv2.countNonZero(central_white_sector) > 0:
+                            tello.rotate_clockwise(-90)
+                            tello.move_forward(30)
+                            print("Color blanco detectado en el sector central")
+                            ultimo_tiempo_deteccion = tiempo_actual
+                        if cv2.countNonZero(central_blue_sector) > 0:
+                            print("Color azul detectado en el sector central")
+                            tello.rotate_clockwise(180)
+                            tello.move_forward(30)
+                            ultimo_tiempo_deteccion = tiempo_actual
 
                     """elif color >= (170, 60, 0) and color <= (240, 62, 17):
                         cv2.putText(frame, 'Naranja', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
@@ -540,9 +559,50 @@ if __name__ == '__main__':
     """)
 
     # Inicia el bucle de eventos asyncio para ejecutar ambos servidores
-    flask_thread = threading.Thread(target=start_flask_app)
+    """ flask_thread = threading.Thread(target=start_flask_app)
     flask_thread.start()
-    asyncio.run(start_websocket_server())
+    asyncio.run(start_websocket_server()) """
+
+    while True:
+        frame = frame_read.frame
+
+        # Convert the image from BGR to HSV (Hue, Saturation, Value)
+        hsv_image = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+
+        # Tamaño de nuestra ventana
+        resize = cv2.resize(frame, (250, 150))
+
+        # Espera una tecla del usuario (en milisegundos el tiempo en paréntesis)
+        key = cv2.waitKey(1)
+
+        # Aterriza
+        if key == 27 or key == ord('q'):
+            break
+
+        # Despega
+        elif key == ord('p'):
+            tello.move_forward(20)
+            tello.takeoff()
+            dronInMove = True
+
+        # Sube más
+        elif key == ord('r'):
+            tello.move_up(50)
+
+        elif key == ord('w'):
+            tello.move_forward(30)
+
+        # Obtener las dimensiones del fotograma
+        getDimentions(frame)
+
+        # Detectar el camino
+        line_frame = line_detector(frame)
+
+        # Detectar círculos en el área central de la imagen
+        detected_frame = detect_figures(frame)
+
+        # Regresa la imagen de BGR a RGB
+        detected_frame = cv2.cvtColor(detected_frame, cv2.COLOR_BGR2RGB)
 
     tello.land()
     print(
